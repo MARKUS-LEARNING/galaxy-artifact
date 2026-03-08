@@ -5,7 +5,7 @@
 If you discover a security vulnerability in this project, please **do not open a public GitHub issue**.
 
 Instead, report it via one of these methods:
-- Open a [GitHub Security Advisory](https://github.com/MARKUS-LEARNING/galaxy-csv/security/advisories/new) (private disclosure)
+- Open a [GitHub Security Advisory](https://github.com/MARKUS-LEARNING/galaxy-artifact/security/advisories/new) (private disclosure)
 
 I will acknowledge the report within 72 hours and aim to release a fix within 14 days for confirmed vulnerabilities.
 

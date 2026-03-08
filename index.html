@@ -15,7 +15,7 @@
         form-action 'none';
       ">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>GALAXY CSV</title>
+<title>GALAXY ARTIFACT</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&display=swap');
   * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -131,7 +131,7 @@
 <body>
 
 <div id="hud">
-  <h1>Galaxy CSV</h1>
+  <h1>Galaxy Artifact</h1>
   <div class="sub" id="hud-sub"></div>
 </div>
 <div id="info"></div>
@@ -172,8 +172,8 @@
 <div id="loading">/// Loading library... ///</div>
 
 <div id="upload-bar">
-  <button class="ub-link" id="upload-btn">Upload your own CSV</button>
-  <input type="file" id="file-input" accept=".csv,.tsv,.txt,text/*">
+  <button class="ub-link" id="upload-btn">Upload your own CSV or XML</button>
+  <input type="file" id="file-input" accept=".csv,.tsv,.txt,.xml,text/*,application/xml">
   <div class="ub-status" id="upload-status"></div>
 </div>
 
@@ -249,6 +249,67 @@ function parseCSV(text){
 }
 function sample(rows){if(rows.length<=MAX_PTS)return rows;const s=rows.length/MAX_PTS,o=[];for(let i=0;i<rows.length&&o.length<MAX_PTS;i+=s)o.push(rows[Math.floor(i)]);return o}
 
+// ─── XML Parser ───
+function parseXML(text) {
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(text, 'application/xml');
+  if (doc.querySelector('parsererror')) return { headers: [], rows: [] };
+
+  // Find the repeating record elements (children of the root, or one level deeper)
+  const root = doc.documentElement;
+  let records = [];
+  // Try direct children first
+  const childTags = {};
+  for (const child of root.children) {
+    childTags[child.tagName] = (childTags[child.tagName] || 0) + 1;
+  }
+  const mostCommonTag = Object.entries(childTags).sort((a, b) => b[1] - a[1])[0];
+  if (mostCommonTag && mostCommonTag[1] > 1) {
+    records = [...root.querySelectorAll(`:scope > ${mostCommonTag[0]}`)];
+  } else {
+    // Try one level deeper (e.g., <root><items><item>...)
+    for (const wrapper of root.children) {
+      const innerTags = {};
+      for (const child of wrapper.children) {
+        innerTags[child.tagName] = (innerTags[child.tagName] || 0) + 1;
+      }
+      const inner = Object.entries(innerTags).sort((a, b) => b[1] - a[1])[0];
+      if (inner && inner[1] > 1) {
+        records = [...wrapper.querySelectorAll(`:scope > ${inner[0]}`)];
+        break;
+      }
+    }
+  }
+  if (!records.length) return { headers: [], rows: [] };
+
+  // Extract headers from first record's child element names + attributes
+  const headerSet = new Set();
+  records.slice(0, 20).forEach(rec => {
+    for (const attr of rec.attributes) headerSet.add(`@${attr.name}`);
+    for (const child of rec.children) headerSet.add(child.tagName);
+  });
+  const headers = [...headerSet];
+
+  const rows = records.map(rec => {
+    const row = {};
+    for (const h of headers) {
+      if (h.startsWith('@')) {
+        row[h] = rec.getAttribute(h.slice(1)) || '';
+      } else {
+        const el = rec.querySelector(`:scope > ${h}`);
+        row[h] = el ? el.textContent.trim() : '';
+      }
+    }
+    return row;
+  });
+
+  return { headers, rows };
+}
+
+function isXML(text) {
+  return text.trimStart().startsWith('<?xml') || text.trimStart().startsWith('<');
+}
+
 // ─── Safe URL builder ───
 function buildYouTubeSearchUrl(song, artist) {
   const query = [artist, song].filter(Boolean).join(' ');
@@ -265,12 +326,12 @@ function safeHref(url) {
 
 // ─── File validation ───
 const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024;
-const ALLOWED_EXTENSIONS = ['.csv', '.tsv', '.txt'];
+const ALLOWED_EXTENSIONS = ['.csv', '.tsv', '.txt', '.xml'];
 
-function validateCsvFile(file) {
+function validateFile(file) {
   if (!file) return 'No file provided.';
   const ext = file.name.slice(file.name.lastIndexOf('.')).toLowerCase();
-  if (!ALLOWED_EXTENSIONS.includes(ext)) return `Invalid file type. Please upload a .csv file. Got: ${ext}`;
+  if (!ALLOWED_EXTENSIONS.includes(ext)) return `Invalid file type. Please upload a .csv or .xml file. Got: ${ext}`;
   if (file.size > MAX_FILE_SIZE_BYTES) return `File too large (${(file.size / 1024 / 1024).toFixed(1)} MB). Maximum is 10 MB.`;
   if (file.size === 0) return 'File is empty.';
   return null;
@@ -633,8 +694,8 @@ function animate(){
 }
 
 // ─── Load ───
-function loadCSVText(text) {
-  const { headers: h, rows: r } = parseCSV(text);
+function loadData(text) {
+  const { headers: h, rows: r } = isXML(text) ? parseXML(text) : parseCSV(text);
   if (!r.length) return;
   totalRows = r.length;
   build(h, sample(r));
@@ -642,7 +703,7 @@ function loadCSVText(text) {
 
 function handleFile(f) {
   const status = document.getElementById('upload-status');
-  const error = validateCsvFile(f);
+  const error = validateFile(f);
   if (error) {
     status.style.display = 'block';
     status.textContent = `/// ${error} ///`;
@@ -657,7 +718,7 @@ function handleFile(f) {
     status.textContent = '/// Parsing... ///';
     setTimeout(() => {
       try {
-        loadCSVText(e.target.result);
+        loadData(e.target.result);
         status.textContent = `/// ${totalRows.toLocaleString()} tracks loaded ///`;
         setTimeout(() => { status.style.display = 'none'; }, 3000);
       } catch (err) { status.textContent = `/// ${err.message} ///`; }
@@ -676,7 +737,7 @@ document.body.addEventListener('drop', e => { e.preventDefault(); if (e.dataTran
 async function loadDefaultLibrary() {
   try {
     const text = await (await fetch('music_library.csv')).text();
-    loadCSVText(text);
+    loadData(text);
     document.getElementById('loading').classList.add('hidden');
   } catch {
     document.getElementById('loading').textContent = '/// Error loading library ///';
