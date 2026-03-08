@@ -1,0 +1,63 @@
+Artist,Album,Song,Genre,Year,Rating,BPM
+Radiohead,OK Computer,Paranoid Android,Art Rock,1997,9.4,132
+Radiohead,Kid A,Everything In Its Right Place,Electronic,2000,9.6,125
+Radiohead,In Rainbows,Reckoner,Art Rock,2007,9.2,130
+Björk,Homogenic,Jóga,Electronic,1997,9.1,80
+Björk,Vespertine,Pagan Poetry,Electronic,2001,9.3,68
+Björk,Post,Army of Me,Electronic,1995,8.8,108
+Aphex Twin,Selected Ambient Works 85-92,Xtal,Ambient,1992,9.5,130
+Aphex Twin,Richard D. James Album,4,IDM,1996,8.9,160
+Aphex Twin,Drukqs,Vordhosbn,IDM,2001,8.4,172
+My Bloody Valentine,Loveless,Only Shallow,Shoegaze,1991,9.8,128
+My Bloody Valentine,Loveless,When You Sleep,Shoegaze,1991,9.6,120
+Portishead,Dummy,Wandering Star,Trip Hop,1994,9.2,72
+Portishead,Third,Machine Gun,Trip Hop,2008,9.0,88
+Massive Attack,Mezzanine,Teardrop,Trip Hop,1998,9.4,76
+Massive Attack,Blue Lines,Unfinished Sympathy,Trip Hop,1991,9.3,98
+Flying Lotus,Cosmogramma,Do the Astral Plane,Electronic,2010,8.8,155
+Flying Lotus,You're Dead!,Never Catch Me,Jazz Fusion,2014,8.6,148
+Boards of Canada,Music Has the Right to Children,Roygbiv,IDM,1998,9.3,100
+Boards of Canada,Geogaddi,Dawn Chorus,IDM,2002,8.7,85
+Cocteau Twins,Heaven or Las Vegas,Cherry-Coloured Funk,Dream Pop,1990,9.4,120
+Cocteau Twins,Treasure,Lorelei,Dream Pop,1984,9.1,112
+Slowdive,Souvlaki,When the Sun Hits,Shoegaze,1993,9.0,126
+Slowdive,Souvlaki,Alison,Shoegaze,1993,9.2,90
+Talk Talk,Spirit of Eden,The Rainbow,Post Rock,1988,9.5,65
+Talk Talk,Laughing Stock,New Grass,Post Rock,1991,9.3,58
+Sigur Rós,Ágætis byrjun,Svefn-g-englar,Post Rock,1999,9.4,70
+Sigur Rós,(),Untitled #3,Post Rock,2002,9.1,82
+Brian Eno,Ambient 1: Music for Airports,1/1,Ambient,1978,9.6,60
+Brian Eno,Another Green World,St. Elmo's Fire,Art Rock,1975,9.2,108
+Brian Eno,Music for Films,Fullness of Wind,Ambient,1978,8.8,55
+Burial,Untrue,Archangel,Electronic,2007,9.5,140
+Burial,Untrue,Ghost Hardware,Electronic,2007,9.3,138
+Autechre,Tri Repetae,Clipper,IDM,1995,8.9,135
+Autechre,LP5,Rae,IDM,1998,8.7,142
+Can,Tago Mago,Halleluwah,Krautrock,1971,9.4,120
+Can,Future Days,Bel Air,Krautrock,1973,9.2,95
+Kraftwerk,Trans-Europe Express,Trans-Europe Express,Electronic,1977,9.3,130
+Kraftwerk,Computer World,Computer Love,Electronic,1981,9.0,100
+Stereolab,Dots and Loops,Brakhage,Post Rock,1997,8.8,118
+Stereolab,Emperor Tomato Ketchup,Metronomic Underground,Post Rock,1996,8.9,125
+Deerhunter,Halcyon Digest,Helicopter,Dream Pop,2010,8.5,108
+Deerhunter,Microcastle,Nothing Ever Happened,Dream Pop,2008,8.6,115
+Animal Collective,Merriweather Post Pavilion,My Girls,Experimental,2009,9.1,132
+Animal Collective,Sung Tongs,Leaf House,Experimental,2004,8.7,140
+Grimes,Visions,Oblivion,Electronic,2012,8.8,138
+Grimes,Art Angels,Kill V. Maim,Electronic,2015,8.4,145
+FKA twigs,LP1,Two Weeks,Electronic,2014,8.6,130
+FKA twigs,MAGDALENE,Cellophane,Art Rock,2019,8.9,72
+Tame Impala,Lonerism,Feels Like We Only Go Backwards,Psychedelic,2012,8.7,118
+Tame Impala,Currents,Let It Happen,Psychedelic,2015,8.5,116
+King Crimson,In the Court of the Crimson King,21st Century Schizoid Man,Art Rock,1969,9.6,132
+King Crimson,Red,Starless,Art Rock,1974,9.4,100
+Tangerine Dream,Phaedra,Phaedra,Ambient,1974,9.1,70
+Tangerine Dream,Rubycon,Rubycon Part One,Ambient,1975,9.0,65
+Sonic Youth,Daydream Nation,Teen Age Riot,Art Rock,1988,9.3,128
+Sonic Youth,Sister,Schizophrenia,Art Rock,1987,8.9,140
+Neutral Milk Hotel,In the Aeroplane Over the Sea,Holland 1945,Experimental,1998,9.5,165
+Neutral Milk Hotel,In the Aeroplane Over the Sea,Two-Headed Boy,Experimental,1998,9.3,130
+The Knife,Silent Shout,Silent Shout,Electronic,2006,8.8,136
+The Knife,Deep Cuts,Heartbeats,Electronic,2003,8.5,120
+Godspeed You! Black Emperor,Lift Your Skinny Fists,Storm,Post Rock,2000,9.4,55
+Godspeed You! Black Emperor,F# A# Infinity,The Dead Flag Blues,Post Rock,1997,9.2,48
