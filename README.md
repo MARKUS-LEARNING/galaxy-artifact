@@ -4,6 +4,8 @@ A 3D data visualizer that turns any CSV into a navigable galaxy of floating geom
 
 **[Live Demo](https://markus-learning.github.io/galaxy-csv/)**
 
+![Galaxy CSV](screenshot.png)
+
 ![Galaxy CSV](https://img.shields.io/badge/three.js-r162-blue) ![GitHub Pages](https://img.shields.io/badge/deploy-GitHub%20Pages-brightgreen)
 
 ## What It Does
