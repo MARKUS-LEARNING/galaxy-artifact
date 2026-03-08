@@ -463,11 +463,12 @@ function build(hdrs, rows) {
   // Update HUD
   const sNote = totalRows > rows.length ? `${rows.length} of ${totalRows.toLocaleString()}` : `${rows.length}`;
   document.getElementById('hud-sub').textContent = `${sNote} tracks`;
+  const esc = s => { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; };
   document.getElementById('info').innerHTML = [
-    `X → ${mappings.x}`,
-    `Y → ${mappings.y}`,
-    `Z → ${mappings.z}`,
-    `Color → ${mappings.color}`,
+    `X → ${esc(mappings.x)}`,
+    `Y → ${esc(mappings.y)}`,
+    `Z → ${esc(mappings.z)}`,
+    `Color → ${esc(mappings.color)}`,
     `${sorted.length} genres`
   ].join('<br>');
   document.getElementById('nav-hint').innerHTML = [
@@ -560,10 +561,20 @@ function onMouse(e) {
     tip.querySelector('.t-album').textContent = albumCol ? r[albumCol] : '';
 
     const gc = colorMap[r[mappings.color]] || '#999';
-    let meta = '';
-    if (genreCol && r[genreCol]) meta += `<span class="t-genre" style="background:${gc}22;color:${gc}">${r[genreCol]}</span> `;
-    if (yearCol && r[yearCol]) meta += ` ${r[yearCol]}`;
-    tip.querySelector('.t-meta').innerHTML = meta;
+    const metaEl = tip.querySelector('.t-meta');
+    metaEl.textContent = '';
+    if (genreCol && r[genreCol]) {
+      const span = document.createElement('span');
+      span.className = 't-genre';
+      span.style.background = gc + '22';
+      span.style.color = gc;
+      span.textContent = r[genreCol];
+      metaEl.appendChild(span);
+      metaEl.appendChild(document.createTextNode(' '));
+    }
+    if (yearCol && r[yearCol]) {
+      metaEl.appendChild(document.createTextNode(r[yearCol]));
+    }
   } else {
     tip.style.display = 'none';
   }
