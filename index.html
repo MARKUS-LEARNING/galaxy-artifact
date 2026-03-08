@@ -7,83 +7,109 @@
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&display=swap');
   * { margin: 0; padding: 0; box-sizing: border-box; }
-  body {
-    background: #fff;
-    font-family: 'Space Mono', monospace;
-    overflow: hidden;
-    color: #111;
-  }
+  body { background: #fff; font-family: 'Space Mono', monospace; overflow: hidden; }
   canvas { display: block; }
 
   #hud {
-    position: fixed; top: 20px; left: 20px; z-index: 10;
-    pointer-events: none;
+    position: fixed; top: 20px; left: 20px; z-index: 10; pointer-events: none;
   }
-  #hud h1 {
-    font-size: 10px; letter-spacing: 5px; text-transform: uppercase;
-    color: #bbb; margin-bottom: 2px;
-  }
-  #hud .sub { font-size: 8px; letter-spacing: 2px; color: #ccc; }
+  #hud h1 { font-size: 10px; letter-spacing: 5px; color: #333; text-transform: uppercase; }
+  #hud .sub { font-size: 8px; letter-spacing: 2px; color: #666; margin-top: 2px; }
 
   #info {
     position: fixed; bottom: 20px; left: 20px; z-index: 10;
-    font-size: 8px; letter-spacing: 2px; color: #bbb;
-    line-height: 1.8; pointer-events: none;
+    font-size: 8px; letter-spacing: 2px; color: #555;
+    line-height: 2; pointer-events: none;
   }
 
-  #nav-hint {
-    position: fixed; bottom: 20px; right: 20px; z-index: 10;
-    font-size: 8px; letter-spacing: 2px; color: #ccc;
-    text-align: right; pointer-events: none; line-height: 2;
-  }
-
-  #tooltip {
+  /* Album Card (replaces tooltip) */
+  #album-card {
     position: fixed; z-index: 20;
-    background: rgba(255,255,255,0.96);
-    backdrop-filter: blur(12px);
-    border: 1px solid #eee;
-    padding: 10px 14px;
-    font-size: 9px; letter-spacing: 1px; line-height: 1.7;
-    color: #333; pointer-events: none; display: none;
-    max-width: 300px;
-    box-shadow: 0 2px 20px rgba(0,0,0,0.05);
+    background: rgba(255,255,255,0.97); backdrop-filter: blur(12px);
+    border: 1px solid #eee; padding: 20px 24px;
+    font-size: 12px; letter-spacing: 1px; line-height: 1.9;
+    color: #222; display: none;
+    max-width: 380px; min-width: 240px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+    border-radius: 4px;
   }
-  #tooltip .t-name { font-weight: 700; font-size: 10px; letter-spacing: 2px; }
-  #tooltip .t-artist { color: #666; }
-  #tooltip .t-album { color: #999; font-style: italic; }
-  #tooltip .t-meta { margin-top: 4px; }
-  #tooltip .t-genre {
-    display: inline-block; padding: 1px 6px; border-radius: 2px;
-    font-size: 7px; letter-spacing: 2px; text-transform: uppercase;
+  #album-card .ac-close {
+    position: absolute; top: 8px; right: 12px;
+    font-size: 18px; cursor: pointer; color: #999;
+    background: none; border: none; font-family: inherit;
+    line-height: 1; padding: 2px 4px;
   }
+  #album-card .ac-close:hover { color: #333; }
+  #album-card .ac-name { font-weight: 700; font-size: 15px; letter-spacing: 2px; margin-bottom: 4px; padding-right: 20px; }
+  #album-card .ac-sub { color: #555; font-size: 12px; margin-bottom: 6px; }
+  #album-card .ac-genre {
+    display: inline-block; padding: 3px 10px; border-radius: 3px;
+    font-size: 10px; letter-spacing: 2px; text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+  #album-card .ac-yt {
+    display: inline-block; padding: 6px 14px; border-radius: 3px;
+    font-size: 10px; letter-spacing: 2px; text-transform: uppercase;
+    background: #222; color: #fff; text-decoration: none;
+    font-family: inherit; transition: background 0.15s;
+  }
+  #album-card .ac-yt:hover { background: #cc0000; }
+
+  /* Customize panel */
+  #ctrl-toggle {
+    position: fixed; top: 20px; right: 20px; z-index: 12;
+    font-family: inherit; font-size: 8px; letter-spacing: 3px;
+    text-transform: uppercase; background: rgba(255,255,255,0.9);
+    border: 1px solid #ddd; color: #555; padding: 5px 12px;
+    cursor: pointer; backdrop-filter: blur(6px);
+  }
+  #ctrl-toggle:hover { border-color: #999; color: #222; }
+  #ctrl-panel {
+    position: fixed; top: 44px; right: 20px; z-index: 11;
+    background: rgba(255,255,255,0.95); backdrop-filter: blur(12px);
+    border: 1px solid #eee; padding: 14px 16px;
+    width: 220px; max-height: calc(100vh - 60px); overflow-y: auto;
+    display: none; box-shadow: 0 2px 16px rgba(0,0,0,0.04);
+  }
+  #ctrl-panel.open { display: block; }
+  #ctrl-panel label {
+    display: block; font-size: 7px; letter-spacing: 2px;
+    text-transform: uppercase; color: #888; margin: 8px 0 3px;
+  }
+  #ctrl-panel label:first-child { margin-top: 0; }
+  #ctrl-panel input[type=range] {
+    width: 100%; border: none; padding: 0; margin: 2px 0; accent-color: #666;
+  }
+  #ctrl-panel .row { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 4px; }
+  #ctrl-panel .chip {
+    font-family: inherit; font-size: 7px; letter-spacing: 1px;
+    padding: 3px 8px; border: 1px solid #ddd; background: none;
+    color: #666; cursor: pointer; text-transform: uppercase;
+  }
+  #ctrl-panel .chip:hover { border-color: #999; }
+  #ctrl-panel .chip.on { background: #222; color: #fff; border-color: #222; }
+  #ctrl-panel hr { border: none; border-top: 1px solid #f0f0f0; margin: 10px 0; }
 
   #drop-zone {
-    position: fixed; top: 50%; left: 50%;
-    transform: translate(-50%, -50%);
+    position: fixed; top: 50%; left: 50%; transform: translate(-50%,-50%);
     z-index: 100; text-align: center;
   }
   #drop-zone.hidden { display: none; }
-  #drop-zone .title {
-    font-size: 9px; letter-spacing: 6px; text-transform: uppercase;
-    color: #bbb; margin-bottom: 16px;
-  }
+  #drop-zone .title { font-size: 9px; letter-spacing: 6px; color: #999; text-transform: uppercase; margin-bottom: 16px; }
   #drop-zone .area {
-    width: 320px; height: 140px;
-    border: 1px dashed #ddd;
+    width: 300px; height: 130px; border: 1px dashed #ccc;
     display: flex; align-items: center; justify-content: center;
-    flex-direction: column; cursor: pointer; transition: all 0.3s;
+    flex-direction: column; cursor: pointer;
   }
-  #drop-zone .area:hover { border-color: #999; }
-  #drop-zone .area p { font-size: 8px; letter-spacing: 3px; color: #aaa; margin: 4px; }
+  #drop-zone .area:hover { border-color: #888; }
+  #drop-zone .area p { font-size: 8px; letter-spacing: 3px; color: #999; margin: 4px; }
   #drop-zone input { display: none; }
   #drop-zone .btn {
-    margin-top: 12px; font-family: inherit;
-    font-size: 8px; letter-spacing: 3px; text-transform: uppercase;
-    background: none; border: 1px solid #ddd; color: #aaa;
-    padding: 6px 16px; cursor: pointer; transition: all 0.3s;
+    margin-top: 12px; font-family: inherit; font-size: 8px; letter-spacing: 3px;
+    text-transform: uppercase; background: none; border: 1px solid #ddd;
+    color: #999; padding: 6px 16px; cursor: pointer;
   }
-  #drop-zone .btn:hover { border-color: #999; color: #666; }
-  body.dragging #drop-zone .area { border-color: #999; background: rgba(0,0,0,0.01); }
+  #drop-zone .btn:hover { border-color: #888; color: #555; }
 </style>
 </head>
 <body>
@@ -92,21 +118,46 @@
   <h1>Spatial CSV</h1>
   <div class="sub" id="hud-sub"></div>
 </div>
-
 <div id="info"></div>
-<div id="nav-hint"></div>
-<div id="tooltip">
-  <div class="t-name"></div>
-  <div class="t-artist"></div>
-  <div class="t-album"></div>
-  <div class="t-meta"></div>
+
+<button id="ctrl-toggle">Customize</button>
+<div id="ctrl-panel">
+  <label>Palette</label>
+  <div class="row" id="pal-row"></div>
+  <label>Background</label>
+  <div class="row" id="bg-row"></div>
+  <hr>
+  <label>Bloom</label>
+  <input type="range" id="r-bloom" min="0" max="2" step="0.05" value="0.4">
+  <label>Object Scale</label>
+  <input type="range" id="r-scale" min="0.2" max="3" step="0.1" value="1">
+  <label>Fly Speed</label>
+  <input type="range" id="r-speed" min="0.2" max="5" step="0.1" value="0.8">
+  <label>Fog</label>
+  <input type="range" id="r-fog" min="0" max="0.008" step="0.0002" value="0.0015">
+  <hr>
+  <label>Toggles</label>
+  <div class="row">
+    <button class="chip on" id="t-labels">Labels</button>
+    <button class="chip" id="t-orbit">Orbit</button>
+    <button class="chip on" id="t-autofly">Auto-Fly</button>
+  </div>
+</div>
+
+<div id="album-card">
+  <button class="ac-close">&times;</button>
+  <div class="ac-name"></div>
+  <div class="ac-sub"></div>
+  <div class="ac-genre"></div>
+  <br>
+  <a class="ac-yt" href="#" target="_blank" rel="noopener noreferrer">YouTube</a>
 </div>
 
 <div id="drop-zone">
   <div class="title" id="drop-title">/// Load CSV ///</div>
   <div class="area" id="drop-area">
     <p>Drop file here</p>
-    <p style="color:#ddd">or click to browse</p>
+    <p style="color:#ccc">or click to browse</p>
     <input type="file" id="file-input" accept=".csv,.tsv,.txt,text/*">
   </div>
   <button class="btn" id="load-sample">Load Sample Music Data</button>
@@ -114,8 +165,8 @@
 
 <script type="importmap">
 { "imports": {
-    "three": "https://cdn.jsdelivr.net/npm/three@0.162.0/build/three.module.js",
-    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.162.0/examples/jsm/"
+  "three": "https://cdn.jsdelivr.net/npm/three@0.162.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.162.0/examples/jsm/"
 } }
 </script>
 
@@ -126,537 +177,523 @@ import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 
-// ─── Palettes ───
-const COLORS = [
-  '#FF006E','#8338EC','#3A86FF','#06D6A0','#FB5607',
-  '#FFBE0B','#FF69B4','#00F5D4','#9B5DE5','#F15BB5',
-  '#FEE440','#00BBF9','#FF4CC3','#72EFDD','#C77DFF',
-  '#F72585','#4CC9F0','#7209B7','#560BAD','#480CA8',
-  '#E63946','#2EC4B6','#E9C46A','#264653','#F4A261',
-  '#A8DADC','#457B9D','#1D3557','#D62828','#FCBF49'
+const PALETTES = {
+  neon:     ['#FF006E','#8338EC','#3A86FF','#06D6A0','#FB5607','#FFBE0B','#FF69B4','#00F5D4','#9B5DE5','#F15BB5','#FEE440','#00BBF9','#FF4CC3','#72EFDD','#C77DFF'],
+  pastel:   ['#FFB3C6','#B8A9C9','#A0C4FF','#CAFFBF','#FFD6A5','#FDFFB6','#FFC6FF','#BDE0FE','#C8B6FF','#FFADAD','#E2F0CB','#C1FBA4','#FBC4AB','#98F5E1','#D0BFFF'],
+  warm:     ['#FF4500','#FF6347','#FF7F50','#FFA07A','#DB7093','#CD5C5C','#B22222','#DC143C','#FF1493','#C71585','#D2691E','#FF8C00','#DAA520','#B8860B','#8B4513'],
+  cool:     ['#0077B6','#00B4D8','#48CAE4','#90E0EF','#023E8A','#0096C7','#5E60CE','#7400B8','#6930C3','#5390D9','#4EA8DE','#56CFE1','#64DFDF','#72EFDD','#80FFDB'],
+  mono:     ['#111','#222','#333','#444','#555','#666','#777','#888','#999','#aaa','#bbb','#ccc','#ddd','#e5e5e5','#f0f0f0'],
+};
+const BACKGROUNDS = {
+  white: '#ffffff', black: '#0a0a0a', midnight: '#0d1b2a', cream: '#f5f0e8', slate: '#1e293b',
+};
+let activePalette = 'neon';
+let activeBg = 'white';
+const OTHER = '#bbbbbb';
+const MAX_GENRES = 15;
+const MAX_PTS = 50000;
+
+// ─── Geometry Pool ───
+const NUM_SHAPES = 8;
+const GEOMETRIES = [
+  () => new THREE.SphereGeometry(0.35, 8, 6),
+  () => new THREE.IcosahedronGeometry(0.35, 0),
+  () => new THREE.OctahedronGeometry(0.35, 0),
+  () => new THREE.DodecahedronGeometry(0.35, 0),
+  () => new THREE.TetrahedronGeometry(0.4, 0),
+  () => new THREE.TorusKnotGeometry(0.22, 0.08, 32, 8),
+  () => new THREE.TorusGeometry(0.25, 0.1, 8, 16),
+  () => new THREE.BoxGeometry(0.45, 0.45, 0.45),
 ];
 
-const GEOMS = [
-  () => new THREE.IcosahedronGeometry(1, 0),
-  () => new THREE.OctahedronGeometry(1, 0),
-  () => new THREE.TetrahedronGeometry(1, 0),
-  () => new THREE.DodecahedronGeometry(1, 0),
-  () => new THREE.TorusGeometry(0.6, 0.25, 8, 12),
-  () => new THREE.TorusKnotGeometry(0.5, 0.2, 48, 8, 2, 3),
-  () => new THREE.BoxGeometry(1.1, 1.1, 1.1),
-  () => new THREE.ConeGeometry(0.7, 1.4, 6),
-  () => new THREE.SphereGeometry(0.8, 8, 6),
-  () => new THREE.CylinderGeometry(0.3, 0.7, 1.2, 8),
-];
+const FLY_DEPTH = 200;
 
-// ─── State ───
-let scene, camera, renderer, composer, controls, clock;
-let meshes = [], dataPoints = [], labelSprites = [];
-let colorMap = {}, headers = [], csvData = [];
-let raycaster = null, mouse = new THREE.Vector2(-9, -9);
-let hoveredMesh = null;
+let scene, camera, renderer, composer, bloomPass, controls, clock;
+let instanceGroups = [], allData = [], labelSprites = [];
+let headers = [], csvData = [], colorMap = {};
+let raycaster, mouse = new THREE.Vector2(-99,-99);
 let totalRows = 0;
-let mappings = {};
-const SPREAD = 80; // spatial spread
-const MAX_PTS = 2000;
-const MAX_LABELS = 20;
-// Keyboard fly speed
-const flyVel = new THREE.Vector3();
+let flySpeed = 0.8;
+let showLabels = true;
+let scaleMul = 1.0;
+let flyOffset = 0;
+let autoFly = true;
+let selectedCard = null; // currently shown card entry
 
-// ─── CSV Parser (RFC 4180) ───
-function csvSplitRows(text) {
-  const rows = []; let cur = '', inQ = false;
-  for (let i = 0; i < text.length; i++) {
-    const c = text[i];
-    if (c === '"') { inQ = !inQ; cur += c; }
-    else if (c === '\n' && !inQ) { rows.push(cur); cur = ''; }
-    else cur += c;
-  }
-  if (cur.trim()) rows.push(cur);
-  return rows;
+// ─── CSV Parser ───
+function csvSplitRows(t){const r=[];let c='',q=false;for(let i=0;i<t.length;i++){const ch=t[i];if(ch==='"'){q=!q;c+=ch}else if(ch==='\n'&&!q){r.push(c);c=''}else c+=ch}if(c.trim())r.push(c);return r}
+function csvSplitFields(l){const f=[];let c='',q=false;for(let i=0;i<l.length;i++){const ch=l[i];if(ch==='"'){if(q&&l[i+1]==='"'){c+='"';i++}else q=!q}else if(ch===','&&!q){f.push(c);c=''}else c+=ch}f.push(c);return f}
+function parseCSV(text){
+  const n=text.replace(/\r\n/g,'\n').replace(/\r/g,'\n');
+  const raw=csvSplitRows(n);if(raw.length<2)return{headers:[],rows:[]};
+  const tsv=raw[0].includes('\t');
+  const p=tsv?l=>l.split('\t').map(v=>v.trim().replace(/^"|"$/g,'')):csvSplitFields;
+  const h=p(raw[0]),rows=[];
+  for(let i=1;i<raw.length;i++){if(!raw[i].trim())continue;const v=p(raw[i]);
+    if(v.length>=h.length-5&&v.length<=h.length+2){const r={};h.forEach((k,j)=>r[k]=(v[j]||'').trim());rows.push(r)}}
+  return{headers:h,rows};
 }
+function sample(rows){if(rows.length<=MAX_PTS)return rows;const s=rows.length/MAX_PTS,o=[];for(let i=0;i<rows.length&&o.length<MAX_PTS;i+=s)o.push(rows[Math.floor(i)]);return o}
 
-function csvSplitFields(line) {
-  const f = []; let cur = '', inQ = false;
-  for (let i = 0; i < line.length; i++) {
-    const c = line[i];
-    if (c === '"') {
-      if (inQ && line[i+1] === '"') { cur += '"'; i++; }
-      else inQ = !inQ;
-    } else if (c === ',' && !inQ) { f.push(cur); cur = ''; }
-    else cur += c;
-  }
-  f.push(cur);
-  return f;
-}
-
-function parseCSV(text) {
-  const norm = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
-  const rawRows = csvSplitRows(norm);
-  if (rawRows.length < 2) return { headers: [], rows: [] };
-
-  const isTSV = rawRows[0].includes('\t');
-  const parse = isTSV
-    ? l => l.split('\t').map(v => v.trim().replace(/^"|"$/g, ''))
-    : csvSplitFields;
-
-  const hdrs = parse(rawRows[0]);
-  const rows = [];
-  for (let i = 1; i < rawRows.length; i++) {
-    if (!rawRows[i].trim()) continue;
-    const vals = parse(rawRows[i]);
-    if (vals.length >= hdrs.length - 5 && vals.length <= hdrs.length + 2) {
-      const row = {};
-      hdrs.forEach((h, j) => row[h] = (vals[j] || '').trim());
-      rows.push(row);
-    }
-  }
-  return { headers: hdrs, rows };
-}
-
-function sampleRows(rows) {
-  if (rows.length <= MAX_PTS) return rows;
-  const step = rows.length / MAX_PTS, out = [];
-  for (let i = 0; i < rows.length && out.length < MAX_PTS; i += step)
-    out.push(rows[Math.floor(i)]);
-  return out;
-}
-
-// ─── Column analysis ───
-function isNum(v) { return v !== '' && !isNaN(parseFloat(v)) && isFinite(v); }
-
-function analyzeCol(col, rows) {
-  const vals = rows.map(r => r[col]).filter(v => v !== '' && v != null);
-  const numVals = vals.filter(isNum);
-  const filledRatio = vals.length / rows.length;
-  return {
-    numeric: numVals.length > vals.length * 0.6,
-    filled: filledRatio,
-    unique: new Set(vals).size,
-    vals
-  };
-}
-
-// ─── Smart Auto-mapping for Music Data ───
-function autoMap(hdrs, rows) {
-  const info = {};
-  hdrs.forEach(h => info[h] = analyzeCol(h, rows));
-
-  const find = (keywords) => hdrs.find(h =>
-    keywords.some(k => h.toLowerCase() === k) // exact match first
-  ) || hdrs.find(h =>
-    keywords.some(k => h.toLowerCase().includes(k))
-  );
-
-  // Music-specific: prefer Year (not Time which is duration in ms)
-  let xCol = find(['year']);
-  // Genre on Y spreads categorically
-  let yCol = find(['genre']);
-  // Artist on Z
-  let zCol = find(['artist']);
-  // Color by genre
-  let colorCol = find(['genre', 'type', 'category', 'style']);
-  // If no music-specific columns found, fall back to general logic
-  if (!xCol) {
-    // Find numeric columns with good fill rate, skip size/bitrate/sample rate
-    const skip = ['size', 'bit rate', 'sample rate', 'disc number', 'disc count',
-                  'track number', 'track count', 'movement number', 'movement count',
-                  'volume adjustment', 'plays', 'skips'];
-    const goodNum = hdrs.filter(h =>
-      info[h].numeric && info[h].filled > 0.3 &&
-      !skip.some(s => h.toLowerCase().includes(s))
-    );
-    xCol = goodNum[0] || hdrs.find(h => info[h].numeric);
-  }
-  if (!yCol) {
-    const goodCat = hdrs.filter(h =>
-      !info[h].numeric && info[h].filled > 0.3 &&
-      info[h].unique > 1 && info[h].unique < rows.length * 0.5
-    );
-    yCol = goodCat[0] || hdrs[1];
-  }
-  if (!zCol) {
-    const cat2 = hdrs.filter(h =>
-      !info[h].numeric && h !== yCol && info[h].filled > 0.3 &&
-      info[h].unique > 1
-    );
-    zCol = cat2[0] || hdrs[2];
-  }
-  if (!colorCol) colorCol = yCol;
-
-  return { x: xCol || hdrs[0], y: yCol || hdrs[1], z: zCol || hdrs[2], color: colorCol };
+// ─── Find columns ───
+function findCol(hdrs, kws) {
+  return hdrs.find(h => kws.some(k => h.toLowerCase() === k))
+    || hdrs.find(h => kws.some(k => h.toLowerCase().includes(k)));
 }
 
 // ─── Scene ───
-function initScene() {
-  scene = new THREE.Scene();
-  scene.background = new THREE.Color(0xffffff);
-  scene.fog = new THREE.FogExp2(0xffffff, 0.0025);
-
-  camera = new THREE.PerspectiveCamera(55, innerWidth / innerHeight, 0.5, 2000);
-  camera.position.set(0, 40, 120);
-
-  renderer = new THREE.WebGLRenderer({ antialias: true });
-  renderer.setSize(innerWidth, innerHeight);
-  renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
-  renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.1;
+function initScene(){
+  scene=new THREE.Scene();
+  scene.background=new THREE.Color(0xffffff);
+  scene.fog=new THREE.FogExp2(0xffffff,0.0015);
+  camera=new THREE.PerspectiveCamera(55,innerWidth/innerHeight,0.5,3000);
+  renderer=new THREE.WebGLRenderer({antialias:true});
+  renderer.setSize(innerWidth,innerHeight);
+  renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+  renderer.toneMapping=THREE.ACESFilmicToneMapping;
   document.body.appendChild(renderer.domElement);
-
-  composer = new EffectComposer(renderer);
-  composer.addPass(new RenderPass(scene, camera));
-  composer.addPass(new UnrealBloomPass(
-    new THREE.Vector2(innerWidth, innerHeight), 0.5, 0.3, 0.9
-  ));
-
-  controls = new OrbitControls(camera, renderer.domElement);
-  controls.enableDamping = true;
-  controls.dampingFactor = 0.06;
-  controls.minDistance = 5;
-  controls.maxDistance = 600;
-
-  scene.add(new THREE.AmbientLight(0xffffff, 0.7));
-  const d1 = new THREE.DirectionalLight(0xffffff, 0.7);
-  d1.position.set(60, 80, 60);
-  scene.add(d1);
-  const d2 = new THREE.DirectionalLight(0x8888ff, 0.25);
-  d2.position.set(-40, -20, -40);
-  scene.add(d2);
-
-  // Subtle grid
-  const grid = new THREE.GridHelper(200, 30, 0xeeeeee, 0xf5f5f5);
-  grid.position.y = -SPREAD / 2 - 5;
-  scene.add(grid);
-
-  raycaster = new THREE.Raycaster();
-  clock = new THREE.Clock();
-
-  window.addEventListener('resize', () => {
-    camera.aspect = innerWidth / innerHeight;
-    camera.updateProjectionMatrix();
-    renderer.setSize(innerWidth, innerHeight);
-    composer.setSize(innerWidth, innerHeight);
-  });
-  renderer.domElement.addEventListener('mousemove', onMouse);
-  window.addEventListener('keydown', onKey);
-  window.addEventListener('keyup', onKeyUp);
+  composer=new EffectComposer(renderer);
+  composer.addPass(new RenderPass(scene,camera));
+  bloomPass=new UnrealBloomPass(new THREE.Vector2(innerWidth,innerHeight),0.4,0.3,0.9);
+  composer.addPass(bloomPass);
+  controls=new OrbitControls(camera,renderer.domElement);
+  controls.enableDamping=true;controls.dampingFactor=0.06;
+  controls.minDistance=3;controls.maxDistance=1500;
+  controls.rotateSpeed=0.4;controls.zoomSpeed=0.6;controls.panSpeed=0.5;
+  controls.autoRotateSpeed=0.3;
+  scene.add(new THREE.AmbientLight(0xffffff,0.8));
+  const d=new THREE.DirectionalLight(0xffffff,0.6);d.position.set(50,80,50);scene.add(d);
+  raycaster=new THREE.Raycaster();clock=new THREE.Clock();
+  window.addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);composer.setSize(innerWidth,innerHeight)});
+  renderer.domElement.addEventListener('click',onClick);
+  renderer.domElement.addEventListener('mousemove',onCursorHint);
+  window.addEventListener('keydown',onKey);window.addEventListener('keyup',onKeyUp);
 }
 
-// ─── Position mapping ───
-function safeMin(a) { let m = Infinity; for (let i = 0; i < a.length; i++) if (a[i] < m) m = a[i]; return m; }
-function safeMax(a) { let m = -Infinity; for (let i = 0; i < a.length; i++) if (a[i] > m) m = a[i]; return m; }
+// ─── Build ───
+function build(hdrs, rows){
+  headers=hdrs; csvData=rows;
 
-// Pre-compute position caches per column
-let posCache = {};
+  // Find key columns
+  const yearCol = findCol(hdrs, ['year']);
+  const genreCol = findCol(hdrs, ['genre','type','category','style']);
+  const nameCol = findCol(hdrs, ['name','title','song','track']) || hdrs[0];
+  const artistCol = findCol(hdrs, ['artist','band']);
+  const albumCol = findCol(hdrs, ['album','release']);
+  const timeCol = findCol(hdrs, ['time','duration','length']);
 
-function computePosCache(col, rows) {
-  const info = analyzeCol(col, rows);
-  if (info.numeric) {
-    const nums = rows.map(r => parseFloat(r[col])).filter(v => !isNaN(v));
-    const min = safeMin(nums), max = safeMax(nums), range = max - min || 1;
-    posCache[col] = { type: 'num', min, range };
-  } else {
-    const uniques = [...new Set(rows.map(r => r[col]))];
-    const map = {};
-    uniques.forEach((v, i) => map[v] = ((i / (uniques.length - 1 || 1)) - 0.5) * SPREAD);
-    posCache[col] = { type: 'cat', map };
-  }
-}
+  // ─── Genre bucketing: top N + Other ───
+  const genreFreq = {};
+  rows.forEach(r => { const g = (genreCol ? r[genreCol] : '') || ''; genreFreq[g] = (genreFreq[g]||0)+1; });
+  const sortedGenres = Object.entries(genreFreq).sort((a,b) => b[1]-a[1]);
+  const topGenres = sortedGenres.slice(0, MAX_GENRES).map(e => e[0]);
+  const genreSet = new Set(topGenres);
 
-function getPos(row, col) {
-  const c = posCache[col];
-  if (!c) return 0;
-  if (c.type === 'num') {
-    const v = parseFloat(row[col]);
-    return isNaN(v) ? 0 : ((v - c.min) / c.range - 0.5) * SPREAD;
-  }
-  return c.map[row[col]] || 0;
-}
-
-// ─── Build Visualization ───
-function build(hdrs, rows) {
-  headers = hdrs;
-  csvData = rows;
-  mappings = autoMap(hdrs, rows);
-
-  // Pre-compute position caches
-  posCache = {};
-  [mappings.x, mappings.y, mappings.z].forEach(col => computePosCache(col, rows));
-
-  // Color map
+  // Assign colors
   colorMap = {};
-  const colorCol = mappings.color;
-  // Count genre frequencies, assign colors to top genres
-  const freq = {};
-  rows.forEach(r => { const v = r[colorCol] || ''; freq[v] = (freq[v] || 0) + 1; });
-  const sorted = Object.entries(freq).sort((a, b) => b[1] - a[1]);
-  sorted.forEach(([val], i) => { colorMap[val] = COLORS[i % COLORS.length]; });
+  const pal = PALETTES[activePalette] || PALETTES.neon;
+  topGenres.forEach((g,i) => { colorMap[g] = pal[i % pal.length]; });
 
-  // Clear scene objects
-  meshes.forEach(m => { m.geometry.dispose(); m.material.dispose(); scene.remove(m); });
-  labelSprites.forEach(s => scene.remove(s));
-  meshes = []; dataPoints = []; labelSprites = [];
+  function getGenreBucket(row) {
+    const g = genreCol ? row[genreCol] : '';
+    return genreSet.has(g) ? g : '_other_';
+  }
 
-  // Create meshes
+  // ─── Year range (numeric X axis) ───
+  let years = [];
+  if (yearCol) {
+    rows.forEach(r => { const y = parseInt(r[yearCol]); if (y > 1900 && y <= 2030) years.push(y); });
+  }
+  const minYear = years.length ? Math.min(...years.slice(0,10000)) : 1960;
+  const maxYear = years.length ? Math.max(...years.slice(0,10000)) : 2025;
+  const yearRange = maxYear - minYear || 1;
+
+  // ─── Layout constants ───
+  const X_SPREAD = 150;  // year timeline width
+  const Y_GAP = 8;       // vertical gap between genre rows
+  const Z_SCATTER = FLY_DEPTH; // depth scatter (was 5)
+
+  // Genre row positions (top genres evenly spaced, Other at bottom)
+  const genreY = {};
+  const allBuckets = [...topGenres, '_other_'];
+  allBuckets.forEach((g,i) => { genreY[g] = (allBuckets.length/2 - i) * Y_GAP; });
+
+  // ─── Clear old ───
+  instanceGroups.forEach(g => { g.mesh.geometry.dispose(); g.mesh.material.dispose(); scene.remove(g.mesh); });
+  labelSprites.forEach(s => { s.material.map?.dispose(); s.material.dispose(); scene.remove(s); });
+  instanceGroups=[]; allData=[]; labelSprites=[];
+  flyOffset = 0;
+
+  // ─── Group rows by (genre bucket, shapeIdx) ───
+  const groups = {}; // key: `${bucket}|${shapeIdx}`
+  rows.forEach((row,i) => {
+    const bucket = getGenreBucket(row);
+    const shapeIdx = i % NUM_SHAPES;
+    const key = `${bucket}|${shapeIdx}`;
+    if (!groups[key]) groups[key] = { bucket, shapeIdx, items: [] };
+    groups[key].items.push({ row, idx: i });
+  });
+
+  const dummy = new THREE.Object3D();
   const centroid = new THREE.Vector3();
+  let total = 0;
+  let groupCounter = 0;
 
-  rows.forEach((row, i) => {
-    const x = getPos(row, mappings.x);
-    const y = getPos(row, mappings.y);
-    const z = getPos(row, mappings.z);
+  Object.values(groups).forEach(group => {
+    const { bucket, shapeIdx, items } = group;
+    if (!items.length) return;
 
-    const colorVal = row[colorCol] || '';
-    const color = colorMap[colorVal] || '#999';
-    const gIdx = i % GEOMS.length;
-
-    const geom = GEOMS[gIdx]();
+    const color = new THREE.Color(colorMap[bucket] || OTHER);
+    const isOther = bucket === '_other_';
     const mat = new THREE.MeshPhysicalMaterial({
-      color: new THREE.Color(color),
-      metalness: 0.1, roughness: 0.35,
-      clearcoat: 0.3, clearcoatRoughness: 0.3,
-      emissive: new THREE.Color(color),
-      emissiveIntensity: 0.12,
-      transparent: true, opacity: 0.85,
+      color, metalness: 0.05, roughness: 0.4,
+      emissive: color, emissiveIntensity: isOther ? 0.03 : 0.15,
+      transparent: true, opacity: isOther ? 0.35 : 0.85,
     });
 
-    const mesh = new THREE.Mesh(geom, mat);
-    const s = 0.8 + Math.random() * 0.6;
-    mesh.scale.set(s, s, s);
-    mesh.position.set(x, y, z);
-    mesh.rotation.set(Math.random()*3, Math.random()*3, Math.random()*3);
-    mesh.userData = { row, basePos: new THREE.Vector3(x, y, z) };
+    const geom = GEOMETRIES[shapeIdx]();
+    const im = new THREE.InstancedMesh(geom, mat, items.length);
+    im.userData.groupIdx = groupCounter;
+    im.userData.bucket = bucket;
 
-    scene.add(mesh);
-    meshes.push(mesh);
-    dataPoints.push({ mesh, row });
-    centroid.add(mesh.position);
+    const gData = [];
+    items.forEach((item, li) => {
+      // X = year position
+      let x = 0;
+      if (yearCol) {
+        const y = parseInt(item.row[yearCol]);
+        x = (y > 1900 && y <= 2030)
+          ? ((y - minYear) / yearRange - 0.5) * X_SPREAD
+          : (Math.random() - 0.5) * 10 - X_SPREAD/2 - 10;
+      } else {
+        x = (item.idx / rows.length - 0.5) * X_SPREAD;
+      }
+
+      // Y = genre row + small jitter
+      const y = genreY[bucket] + (Math.random() - 0.5) * Y_GAP * 0.5;
+
+      // Z = wide depth scatter for fly-through
+      let z = (Math.random() - 0.5) * Z_SCATTER;
+      if (timeCol) {
+        const t = parseFloat(item.row[timeCol]);
+        if (!isNaN(t) && t > 0) z = (Math.random() - 0.5) * Z_SCATTER;
+      }
+
+      const s = isOther ? 0.4 : 0.55 + Math.random() * 0.3;
+      dummy.position.set(x, y, z);
+      dummy.scale.set(s, s, s);
+      dummy.rotation.set(Math.random()*3, Math.random()*3, Math.random()*3);
+      dummy.updateMatrix();
+      im.setMatrixAt(li, dummy.matrix);
+
+      // Per-instance animation params
+      const phase = Math.random() * Math.PI * 2;
+      const freq = 0.3 + Math.random() * 0.5;
+      const amp = 0.2 + Math.random() * 0.4;
+
+      const bp = new THREE.Vector3(x, y, z);
+      centroid.add(bp); total++;
+      gData.push({ row: item.row, idx: item.idx, localIdx: li, basePos: bp, baseScale: s,
+        nameCol, artistCol, albumCol, genreCol, yearCol,
+        phase, freq, amp });
+    });
+
+    im.instanceMatrix.needsUpdate = true;
+    scene.add(im);
+    instanceGroups.push({ mesh: im, data: gData, bucket });
+    groupCounter++;
   });
 
-  centroid.divideScalar(rows.length || 1);
+  centroid.divideScalar(total || 1);
 
-  // Labels — only top N genres by frequency
-  const topGenres = sorted.slice(0, MAX_LABELS);
-  const genrePositions = {};
-  dataPoints.forEach(dp => {
-    const g = dp.row[colorCol] || '';
-    if (!genrePositions[g]) genrePositions[g] = { sum: new THREE.Vector3(), count: 0, color: colorMap[g] };
-    genrePositions[g].sum.add(dp.mesh.position);
-    genrePositions[g].count++;
-  });
+  // ─── Genre labels along left edge ───
+  if (showLabels) {
+    allBuckets.forEach(bucket => {
+      if (bucket === '_other_') return;
+      const label = bucket;
+      const yPos = genreY[bucket];
+      const sprite = makeLabel(label, colorMap[bucket] || OTHER);
+      sprite.position.set(-X_SPREAD/2 - 14, yPos, 0);
+      scene.add(sprite);
+      labelSprites.push(sprite);
+    });
 
-  topGenres.forEach(([genre]) => {
-    const gp = genrePositions[genre];
-    if (!gp || !genre) return;
-    const avg = gp.sum.clone().divideScalar(gp.count);
-    avg.y += 3;
-    const sprite = makeLabel(genre, gp.color);
-    sprite.position.copy(avg);
-    scene.add(sprite);
-    labelSprites.push(sprite);
-  });
+    // Other label
+    if (groups[Object.keys(groups).find(k => k.startsWith('_other_'))]) {
+      const sprite = makeLabel(`Other (${sortedGenres.length - MAX_GENRES} genres)`, OTHER);
+      sprite.position.set(-X_SPREAD/2 - 14, genreY['_other_'], 0);
+      scene.add(sprite);
+      labelSprites.push(sprite);
+    }
 
-  // Center camera on data
+    // Year markers along the bottom
+    const yearStep = yearRange > 30 ? 10 : 5;
+    for (let y = Math.ceil(minYear/yearStep)*yearStep; y <= maxYear; y += yearStep) {
+      const x = ((y - minYear) / yearRange - 0.5) * X_SPREAD;
+      const sprite = makeLabel(String(y), '#bbb');
+      sprite.position.set(x, genreY['_other_'] - Y_GAP, 0);
+      sprite.scale.set(8, 1.5, 1);
+      scene.add(sprite);
+      labelSprites.push(sprite);
+    }
+  }
+
+  // Camera — point into the approaching field
   controls.target.copy(centroid);
-  camera.position.set(centroid.x, centroid.y + 30, centroid.z + SPREAD * 1.3);
+  camera.position.set(centroid.x, centroid.y + 10, centroid.z + X_SPREAD * 0.5);
   controls.update();
 
-  // Update HUD
-  const sNote = totalRows > rows.length ? `${rows.length} of ${totalRows.toLocaleString()}` : `${rows.length}`;
-  document.getElementById('hud-sub').textContent = `${sNote} tracks`;
+  // HUD
+  const ct = totalRows > rows.length ? `${rows.length.toLocaleString()} of ${totalRows.toLocaleString()}` : rows.length.toLocaleString();
+  document.getElementById('hud-sub').textContent = `${ct} tracks`;
   const esc = s => { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; };
   document.getElementById('info').innerHTML = [
-    `X → ${esc(mappings.x)}`,
-    `Y → ${esc(mappings.y)}`,
-    `Z → ${esc(mappings.z)}`,
-    `Color → ${esc(mappings.color)}`,
-    `${sorted.length} genres`
-  ].join('<br>');
-  document.getElementById('nav-hint').innerHTML = [
-    'scroll — zoom',
-    'drag — orbit',
-    'arrow keys — fly',
-    'hover — inspect'
-  ].join('<br>');
+    yearCol ? `← ${minYear} ─── ${esc(yearCol)} ─── ${maxYear} →` : '',
+    genreCol ? `↕ ${esc(genreCol)} (top ${topGenres.length})` : '',
+    'scroll zoom · drag orbit · arrows fly · click to inspect',
+  ].filter(Boolean).join('<br>');
 }
 
-function makeLabel(text, color) {
-  const canvas = document.createElement('canvas');
-  canvas.width = 512; canvas.height = 96;
-  const ctx = canvas.getContext('2d');
-  ctx.font = '500 36px Space Mono, monospace';
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.fillStyle = color || '#999';
-  ctx.globalAlpha = 0.7;
-  ctx.fillText(text.length > 20 ? text.slice(0, 20) + '...' : text, 256, 48);
-
-  const tex = new THREE.CanvasTexture(canvas);
-  tex.minFilter = THREE.LinearFilter;
-  const mat = new THREE.SpriteMaterial({ map: tex, transparent: true, opacity: 0.6, depthWrite: false });
-  const sprite = new THREE.Sprite(mat);
-  sprite.scale.set(16, 3, 1);
-  return sprite;
+function makeLabel(text, color){
+  const c = document.createElement('canvas');
+  c.width=512;c.height=64;
+  const ctx=c.getContext('2d');
+  ctx.font='500 28px Space Mono, monospace';
+  ctx.textAlign='left';ctx.textBaseline='middle';
+  ctx.fillStyle=color||'#999';ctx.globalAlpha=0.85;
+  ctx.fillText(text.length>26?text.slice(0,26)+'..':text,8,32);
+  const tex=new THREE.CanvasTexture(c);tex.minFilter=THREE.LinearFilter;
+  const mat=new THREE.SpriteMaterial({map:tex,transparent:true,opacity:0.7,depthWrite:false});
+  const s=new THREE.Sprite(mat);s.scale.set(12,1.5,1);return s;
 }
 
-// ─── Keyboard fly ───
-const keys = {};
-function onKey(e) {
-  if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','w','a','s','d'].includes(e.key)) {
-    e.preventDefault();
-    keys[e.key] = true;
-  }
+// ─── Floating Animation ───
+const _floatDummy = new THREE.Object3D();
+function updateFloat(t) {
+  instanceGroups.forEach(g => {
+    let needsUpdate = false;
+    g.data.forEach((d, li) => {
+      const px = d.basePos.x + Math.sin(t * d.freq + d.phase) * d.amp;
+      const py = d.basePos.y + Math.cos(t * d.freq * 0.7 + d.phase + 1.0) * d.amp * 0.6;
+      let pz = d.basePos.z;
+
+      // Z drift (fly at user)
+      if (autoFly) {
+        pz = ((d.basePos.z + flyOffset) % FLY_DEPTH + FLY_DEPTH) % FLY_DEPTH - FLY_DEPTH / 2;
+      }
+
+      const s = d.baseScale * scaleMul;
+      _floatDummy.position.set(px, py, pz);
+      _floatDummy.scale.set(s, s, s);
+      // Slow Y-axis spin
+      _floatDummy.rotation.set(0, t * 0.15 + d.phase, 0);
+      _floatDummy.updateMatrix();
+      g.mesh.setMatrixAt(li, _floatDummy.matrix);
+      needsUpdate = true;
+    });
+    if (needsUpdate) g.mesh.instanceMatrix.needsUpdate = true;
+  });
 }
-function onKeyUp(e) { keys[e.key] = false; }
 
-function updateFly() {
-  const speed = 1.2;
-  const forward = new THREE.Vector3();
-  camera.getWorldDirection(forward);
-  forward.y = 0; forward.normalize();
-  const right = new THREE.Vector3().crossVectors(forward, camera.up).normalize();
-
-  if (keys['ArrowUp'] || keys['w']) { camera.position.addScaledVector(forward, speed); controls.target.addScaledVector(forward, speed); }
-  if (keys['ArrowDown'] || keys['s']) { camera.position.addScaledVector(forward, -speed); controls.target.addScaledVector(forward, -speed); }
-  if (keys['ArrowLeft'] || keys['a']) { camera.position.addScaledVector(right, -speed); controls.target.addScaledVector(right, -speed); }
-  if (keys['ArrowRight'] || keys['d']) { camera.position.addScaledVector(right, speed); controls.target.addScaledVector(right, speed); }
+// ─── Fly ───
+const keys={};
+function onKey(e){if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','w','a','s','d'].includes(e.key)){e.preventDefault();keys[e.key]=true}}
+function onKeyUp(e){keys[e.key]=false}
+function fly(){
+  const sp=flySpeed;
+  const fwd=new THREE.Vector3();camera.getWorldDirection(fwd);fwd.y=0;fwd.normalize();
+  const rt=new THREE.Vector3().crossVectors(fwd,camera.up).normalize();
+  if(keys.ArrowUp||keys.w){camera.position.addScaledVector(fwd,sp);controls.target.addScaledVector(fwd,sp)}
+  if(keys.ArrowDown||keys.s){camera.position.addScaledVector(fwd,-sp);controls.target.addScaledVector(fwd,-sp)}
+  if(keys.ArrowLeft||keys.a){camera.position.addScaledVector(rt,-sp);controls.target.addScaledVector(rt,-sp)}
+  if(keys.ArrowRight||keys.d){camera.position.addScaledVector(rt,sp);controls.target.addScaledVector(rt,sp)}
 }
 
-// ─── Mouse hover ───
-function onMouse(e) {
+// ─── Click (Album Card) ───
+function onClick(e) {
+  // Ignore clicks on the card itself
+  if (e.target.closest('#album-card')) return;
+
   mouse.x = (e.clientX / innerWidth) * 2 - 1;
   mouse.y = -(e.clientY / innerHeight) * 2 + 1;
-
   raycaster.setFromCamera(mouse, camera);
-  const hits = raycaster.intersectObjects(meshes);
-  const tip = document.getElementById('tooltip');
-
-  if (hoveredMesh) {
-    hoveredMesh.material.emissiveIntensity = 0.12;
-    if (hoveredMesh.userData.origScale)
-      hoveredMesh.scale.copy(hoveredMesh.userData.origScale);
-    hoveredMesh = null;
-  }
+  const hits = raycaster.intersectObjects(instanceGroups.map(g => g.mesh));
+  const card = document.getElementById('album-card');
 
   if (hits.length) {
-    const m = hits[0].object;
-    hoveredMesh = m;
-    if (!m.userData.origScale) m.userData.origScale = m.scale.clone();
-    m.material.emissiveIntensity = 0.5;
-    m.scale.copy(m.userData.origScale).multiplyScalar(1.5);
+    const h = hits[0], gi = h.object.userData.groupIdx;
+    const entry = instanceGroups[gi]?.data[h.instanceId];
+    if (!entry) { card.style.display = 'none'; selectedCard = null; return; }
+    selectedCard = entry;
 
-    const r = m.userData.row;
-    tip.style.display = 'block';
-    tip.style.left = Math.min(e.clientX + 14, innerWidth - 310) + 'px';
-    tip.style.top = Math.min(e.clientY - 8, innerHeight - 120) + 'px';
+    const r = entry.row;
+    card.querySelector('.ac-name').textContent = r[entry.nameCol] || '';
+    const parts = [];
+    if (entry.artistCol && r[entry.artistCol]) parts.push(r[entry.artistCol]);
+    if (entry.albumCol && r[entry.albumCol]) parts.push(r[entry.albumCol]);
+    if (entry.yearCol && r[entry.yearCol]) parts.push(r[entry.yearCol]);
+    card.querySelector('.ac-sub').textContent = parts.join(' · ');
 
-    // Find columns dynamically
-    const nameCol = headers.find(h => /^name$/i.test(h)) || headers[0];
-    const artistCol = headers.find(h => /artist/i.test(h));
-    const albumCol = headers.find(h => /album/i.test(h));
-    const genreCol = headers.find(h => /genre/i.test(h));
-    const yearCol = headers.find(h => /year/i.test(h));
+    const gc = colorMap[entry.genreCol ? r[entry.genreCol] : ''] || OTHER;
+    const ge = card.querySelector('.ac-genre');
+    ge.textContent = entry.genreCol ? r[entry.genreCol] : '';
+    ge.style.background = gc + '22';
+    ge.style.color = gc;
 
-    tip.querySelector('.t-name').textContent = r[nameCol] || '';
-    tip.querySelector('.t-artist').textContent = artistCol ? r[artistCol] : '';
-    tip.querySelector('.t-album').textContent = albumCol ? r[albumCol] : '';
+    // YouTube search link
+    const artist = (entry.artistCol && r[entry.artistCol]) || '';
+    const song = r[entry.nameCol] || '';
+    const ytQuery = encodeURIComponent(artist + ' ' + song);
+    card.querySelector('.ac-yt').href = 'https://www.youtube.com/results?search_query=' + ytQuery;
 
-    const gc = colorMap[r[mappings.color]] || '#999';
-    const metaEl = tip.querySelector('.t-meta');
-    metaEl.textContent = '';
-    if (genreCol && r[genreCol]) {
-      const span = document.createElement('span');
-      span.className = 't-genre';
-      span.style.background = gc + '22';
-      span.style.color = gc;
-      span.textContent = r[genreCol];
-      metaEl.appendChild(span);
-      metaEl.appendChild(document.createTextNode(' '));
-    }
-    if (yearCol && r[yearCol]) {
-      metaEl.appendChild(document.createTextNode(r[yearCol]));
-    }
+    card.style.display = 'block';
+    card.style.left = Math.min(e.clientX + 14, innerWidth - 400) + 'px';
+    card.style.top = Math.min(e.clientY - 8, innerHeight - 180) + 'px';
   } else {
-    tip.style.display = 'none';
+    card.style.display = 'none';
+    selectedCard = null;
   }
 }
 
+// ─── Cursor hint (pointer on hoverable orbs) ───
+function onCursorHint(e) {
+  mouse.x = (e.clientX / innerWidth) * 2 - 1;
+  mouse.y = -(e.clientY / innerHeight) * 2 + 1;
+  raycaster.setFromCamera(mouse, camera);
+  const hits = raycaster.intersectObjects(instanceGroups.map(g => g.mesh));
+  renderer.domElement.style.cursor = hits.length ? 'pointer' : '';
+}
+
+// ─── Close card ───
+document.getElementById('album-card').querySelector('.ac-close').addEventListener('click', (e) => {
+  e.stopPropagation();
+  document.getElementById('album-card').style.display = 'none';
+  selectedCard = null;
+});
+
 // ─── Animate ───
-function animate() {
+function animate(){
   requestAnimationFrame(animate);
   const t = clock.getElapsedTime();
 
-  meshes.forEach((m, i) => {
-    m.rotation.x += 0.001 + (i % 5) * 0.0003;
-    m.rotation.y += 0.002 + (i % 7) * 0.0002;
-    m.position.y = m.userData.basePos.y + Math.sin(t * 0.4 + i * 0.2) * 0.5;
-  });
+  // Accumulate fly offset
+  if (autoFly) {
+    flyOffset += flySpeed * 0.02;
+  }
 
-  updateFly();
+  fly();
+  updateFloat(t);
   controls.update();
   composer.render();
 }
 
-// ─── File Loading ───
-function handleFile(file) {
-  document.getElementById('drop-title').textContent =
-    `/// Loading ${(file.size/1048576).toFixed(1)} MB... ///`;
-
-  const reader = new FileReader();
-  reader.onerror = () => {
-    document.getElementById('drop-title').textContent = '/// Read error ///';
-  };
-  reader.onload = (e) => {
-    const raw = e.target.result;
-    document.getElementById('drop-title').textContent = '/// Parsing... ///';
-    setTimeout(() => {
-      try {
-        const { headers: h, rows: r } = parseCSV(raw);
-        if (!r.length) {
-          document.getElementById('drop-title').textContent =
-            `/// 0 rows parsed (${h.length} cols found) ///`;
-          return;
-        }
-        totalRows = r.length;
-        const sampled = sampleRows(r);
+// ─── Load ───
+function handleFile(f){
+  document.getElementById('drop-title').textContent=`/// Loading ${(f.size/1048576).toFixed(1)} MB... ///`;
+  const rd=new FileReader();
+  rd.onerror=()=>{document.getElementById('drop-title').textContent='/// Error ///'};
+  rd.onload=e=>{
+    const raw=e.target.result;
+    document.getElementById('drop-title').textContent='/// Parsing... ///';
+    setTimeout(()=>{
+      try{
+        const{headers:h,rows:r}=parseCSV(raw);
+        if(!r.length){document.getElementById('drop-title').textContent=`/// 0 rows (${h.length} cols) ///`;return}
+        totalRows=r.length;
         document.getElementById('drop-zone').classList.add('hidden');
-        build(h, sampled);
-      } catch (err) {
-        document.getElementById('drop-title').textContent = `/// ${err.message} ///`;
-      }
-    }, 30);
+        build(h,sample(r));
+      }catch(err){document.getElementById('drop-title').textContent=`/// ${err.message} ///`}
+    },30);
   };
-  reader.readAsText(file);
+  rd.readAsText(f);
 }
 
-async function loadSample() {
-  try {
-    const text = await (await fetch('sample_music.csv')).text();
-    const { headers: h, rows: r } = parseCSV(text);
-    if (!r.length) return;
-    totalRows = r.length;
-    document.getElementById('drop-zone').classList.add('hidden');
-    build(h, r);
-  } catch {
-    document.getElementById('drop-title').textContent = '/// Could not load sample ///';
-  }
-}
-
-// ─── Events ───
-const dropArea = document.getElementById('drop-area');
-const fileInput = document.getElementById('file-input');
-dropArea.addEventListener('click', () => fileInput.click());
-fileInput.addEventListener('change', e => { if (e.target.files[0]) handleFile(e.target.files[0]); });
-document.body.addEventListener('dragover', e => { e.preventDefault(); document.body.classList.add('dragging'); });
-document.body.addEventListener('dragleave', () => document.body.classList.remove('dragging'));
-document.body.addEventListener('drop', e => {
-  e.preventDefault(); document.body.classList.remove('dragging');
-  if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
+document.getElementById('drop-area').addEventListener('click',()=>document.getElementById('file-input').click());
+document.getElementById('file-input').addEventListener('change',e=>{if(e.target.files[0])handleFile(e.target.files[0])});
+document.body.addEventListener('dragover',e=>{e.preventDefault()});
+document.body.addEventListener('drop',e=>{e.preventDefault();if(e.dataTransfer.files[0])handleFile(e.dataTransfer.files[0])});
+document.getElementById('load-sample').addEventListener('click',async()=>{
+  try{const t=await(await fetch('sample_music.csv')).text();const{headers:h,rows:r}=parseCSV(t);
+    if(!r.length)return;totalRows=r.length;document.getElementById('drop-zone').classList.add('hidden');build(h,r);
+  }catch{document.getElementById('drop-title').textContent='/// Error ///'}
 });
-document.getElementById('load-sample').addEventListener('click', loadSample);
 
-// ─── Boot ───
-initScene();
-animate();
+// ─── Customize Panel ───
+function rebuildViz() {
+  if (headers.length && csvData.length) build(headers, csvData);
+}
+
+document.getElementById('ctrl-toggle').addEventListener('click', () => {
+  document.getElementById('ctrl-panel').classList.toggle('open');
+});
+
+// Palette chips
+const palRow = document.getElementById('pal-row');
+Object.keys(PALETTES).forEach(name => {
+  const btn = document.createElement('button');
+  btn.className = 'chip' + (name === activePalette ? ' on' : '');
+  btn.textContent = name;
+  btn.addEventListener('click', () => {
+    activePalette = name;
+    palRow.querySelectorAll('.chip').forEach(c => c.classList.remove('on'));
+    btn.classList.add('on');
+    rebuildViz();
+  });
+  palRow.appendChild(btn);
+});
+
+// Background chips
+const bgRow = document.getElementById('bg-row');
+Object.entries(BACKGROUNDS).forEach(([name, hex]) => {
+  const btn = document.createElement('button');
+  btn.className = 'chip' + (name === activeBg ? ' on' : '');
+  btn.textContent = name;
+  btn.addEventListener('click', () => {
+    activeBg = name;
+    bgRow.querySelectorAll('.chip').forEach(c => c.classList.remove('on'));
+    btn.classList.add('on');
+    const col = new THREE.Color(hex);
+    scene.background = col;
+    scene.fog.color = col;
+    const isDark = name !== 'white' && name !== 'cream';
+    document.getElementById('hud').style.color = isDark ? '#ddd' : '';
+    document.getElementById('info').style.color = isDark ? '#999' : '';
+    document.querySelector('#hud h1').style.color = isDark ? '#eee' : '#333';
+    document.querySelector('#hud .sub').style.color = isDark ? '#aaa' : '#666';
+  });
+  bgRow.appendChild(btn);
+});
+
+// Sliders
+document.getElementById('r-bloom').addEventListener('input', e => {
+  bloomPass.strength = parseFloat(e.target.value);
+});
+document.getElementById('r-scale').addEventListener('input', e => {
+  scaleMul = parseFloat(e.target.value);
+});
+document.getElementById('r-speed').addEventListener('input', e => {
+  flySpeed = parseFloat(e.target.value);
+});
+document.getElementById('r-fog').addEventListener('input', e => {
+  scene.fog.density = parseFloat(e.target.value);
+});
+
+// Toggles
+document.getElementById('t-labels').addEventListener('click', function() {
+  this.classList.toggle('on');
+  showLabels = this.classList.contains('on');
+  rebuildViz();
+});
+document.getElementById('t-orbit').addEventListener('click', function() {
+  this.classList.toggle('on');
+  controls.autoRotate = this.classList.contains('on');
+});
+document.getElementById('t-autofly').addEventListener('click', function() {
+  this.classList.toggle('on');
+  autoFly = this.classList.contains('on');
+});
+
+initScene();animate();
 </script>
 </body>
 </html>
