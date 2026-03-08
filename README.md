@@ -2,9 +2,11 @@
 
 A 3D data visualizer that turns any CSV or XML into a navigable galaxy of floating geometric shapes. Built with Three.js — no dependencies, no build step, just one HTML file.
 
-**[Live Demo](https://markus-learning.github.io/galaxy-csv/)**
+**[Live Demo](https://markus-learning.github.io/galaxy-artifact/)**
 
 ![Galaxy Artifact](screenshot.png)
+
+<video src="demo.mp4" autoplay loop muted playsinline width="100%"></video>
 
 ![Galaxy Artifact](https://img.shields.io/badge/three.js-r162-blue) ![GitHub Pages](https://img.shields.io/badge/deploy-GitHub%20Pages-brightgreen)
 
@@ -64,8 +66,8 @@ If columns aren't found, data is spread by row index. The included `music_librar
 ## Run Locally
 
 ```bash
-git clone https://github.com/MARKUS-LEARNING/galaxy-csv.git
-cd galaxy-csv
+git clone https://github.com/MARKUS-LEARNING/galaxy-artifact.git
+cd galaxy-artifact
 python3 -m http.server 8000
 # open http://localhost:8000
 ```
