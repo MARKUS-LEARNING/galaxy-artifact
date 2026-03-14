@@ -5,11 +5,12 @@
 <meta http-equiv="Content-Security-Policy"
       content="
         default-src 'self';
-        script-src 'self' 'unsafe-inline';
+        script-src 'self' 'unsafe-inline' blob:;
         style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://fonts.gstatic.com;
         font-src https://fonts.gstatic.com;
         img-src 'self' data: blob:;
         connect-src 'self';
+        worker-src blob:;
         object-src 'none';
         base-uri 'self';
         form-action 'none';
@@ -118,6 +119,21 @@
     font-size: 8px; letter-spacing: 2px; color: #999;
     margin-top: 4px; display: none;
   }
+  .ub-progress {
+    width: 160px; height: 3px; background: #eee;
+    margin-top: 6px; display: none; border-radius: 1px;
+  }
+  .ub-progress-fill {
+    height: 100%; width: 0%; background: #555;
+    border-radius: 1px; transition: width 0.15s;
+  }
+
+  /* Drag-and-drop overlay */
+  body.drag-over::after {
+    content: ''; position: fixed; inset: 12px; z-index: 50;
+    border: 2px dashed #999; border-radius: 8px;
+    background: rgba(255,255,255,0.04); pointer-events: none;
+  }
 
   /* Loading overlay (shown only during initial load) */
   #loading {
@@ -175,6 +191,7 @@
   <button class="ub-link" id="upload-btn">Upload your own CSV or XML</button>
   <input type="file" id="file-input" accept=".csv,.tsv,.txt,.xml,text/*,application/xml">
   <div class="ub-status" id="upload-status"></div>
+  <div class="ub-progress" id="upload-progress"><div class="ub-progress-fill" id="upload-progress-fill"></div></div>
 </div>
 
 <script type="importmap">
@@ -248,6 +265,28 @@ function parseCSV(text){
   return{headers:h,rows};
 }
 function sample(rows){if(rows.length<=MAX_PTS)return rows;const s=rows.length/MAX_PTS,o=[];for(let i=0;i<rows.length&&o.length<MAX_PTS;i+=s)o.push(rows[Math.floor(i)]);return o}
+
+// ─── CSV Web Worker (inline via Blob URL) ───
+const _workerCode = `
+  ${csvSplitRows.toString()}
+  ${csvSplitFields.toString()}
+  ${parseCSV.toString()}
+  const MAX_PTS = ${MAX_PTS};
+  ${sample.toString()}
+  self.onmessage = function(e) {
+    try {
+      self.postMessage({ type: 'progress', phase: 'parsing', pct: 55 });
+      const result = parseCSV(e.data);
+      self.postMessage({ type: 'progress', phase: 'sampling', pct: 80 });
+      const sampled = sample(result.rows);
+      self.postMessage({ type: 'done', headers: result.headers, rows: sampled, totalRows: result.rows.length });
+    } catch (err) {
+      self.postMessage({ type: 'error', message: err.message });
+    }
+  };
+`;
+const _workerBlob = new Blob([_workerCode], { type: 'application/javascript' });
+const _workerUrl = URL.createObjectURL(_workerBlob);
 
 // ─── XML Parser ───
 function parseXML(text) {
@@ -325,14 +364,14 @@ function safeHref(url) {
 }
 
 // ─── File validation ───
-const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024;
+const MAX_FILE_SIZE_BYTES = 200 * 1024 * 1024;
 const ALLOWED_EXTENSIONS = ['.csv', '.tsv', '.txt', '.xml'];
 
 function validateFile(file) {
   if (!file) return 'No file provided.';
   const ext = file.name.slice(file.name.lastIndexOf('.')).toLowerCase();
   if (!ALLOWED_EXTENSIONS.includes(ext)) return `Invalid file type. Please upload a .csv or .xml file. Got: ${ext}`;
-  if (file.size > MAX_FILE_SIZE_BYTES) return `File too large (${(file.size / 1024 / 1024).toFixed(1)} MB). Maximum is 10 MB.`;
+  if (file.size > MAX_FILE_SIZE_BYTES) return `File too large (${(file.size / 1024 / 1024).toFixed(1)} MB). Maximum is 200 MB.`;
   if (file.size === 0) return 'File is empty.';
   return null;
 }
@@ -421,7 +460,12 @@ function build(hdrs, rows){
   allBuckets.forEach((g,i) => { genreY[g] = (allBuckets.length/2 - i) * Y_GAP; });
 
   // ─── Clear old ───
-  instanceGroups.forEach(g => { g.mesh.geometry.dispose(); g.mesh.material.dispose(); scene.remove(g.mesh); });
+  instanceGroups.forEach(g => {
+    g.mesh.geometry.dispose(); g.mesh.material.dispose();
+    g.mesh.dispose(); // release InstancedMesh internal buffers
+    scene.remove(g.mesh);
+    g.data = null;
+  });
   labelSprites.forEach(s => { s.material.map?.dispose(); s.material.dispose(); scene.remove(s); });
   instanceGroups=[]; allData=[]; labelSprites=[];
   flyOffset = 0;
@@ -677,8 +721,19 @@ document.getElementById('album-card').querySelector('.ac-close').addEventListene
   selectedCard = null;
 });
 
+// ─── Page Visibility ───
+let isPageVisible = true;
+document.addEventListener('visibilitychange', () => {
+  isPageVisible = !document.hidden;
+  if (isPageVisible && clock) {
+    clock.getDelta(); // discard stale delta to prevent animation jump
+    requestAnimationFrame(animate);
+  }
+});
+
 // ─── Animate ───
 function animate(){
+  if (!isPageVisible) return;
   requestAnimationFrame(animate);
   const t = clock.getElapsedTime();
 
@@ -703,26 +758,93 @@ function loadData(text) {
 
 function handleFile(f) {
   const status = document.getElementById('upload-status');
-  const error = validateFile(f);
-  if (error) {
-    status.style.display = 'block';
-    status.textContent = `/// ${error} ///`;
-    setTimeout(() => { status.style.display = 'none'; }, 4000);
-    return;
+  const bar = document.getElementById('upload-progress');
+  const fill = document.getElementById('upload-progress-fill');
+  const fileInput = document.getElementById('file-input');
+
+  function setProgress(pct) {
+    bar.style.display = 'block';
+    fill.style.width = Math.min(100, Math.round(pct)) + '%';
   }
+  function hideProgress() {
+    setTimeout(() => { bar.style.display = 'none'; fill.style.width = '0%'; }, 600);
+  }
+  function showError(msg) {
+    status.style.display = 'block';
+    status.textContent = `/// ${msg} ///`;
+    hideProgress();
+    setTimeout(() => { status.style.display = 'none'; }, 5000);
+  }
+
+  const error = validateFile(f);
+  if (error) { showError(error); return; }
+
   status.style.display = 'block';
-  status.textContent = `/// Loading ${(f.size / 1048576).toFixed(1)} MB... ///`;
+  status.textContent = `/// Reading ${(f.size / 1048576).toFixed(1)} MB... ///`;
+  setProgress(0);
+
   const rd = new FileReader();
-  rd.onerror = () => { status.textContent = '/// Error ///'; };
+  rd.onprogress = e => { if (e.lengthComputable) setProgress((e.loaded / e.total) * 50); };
+  rd.onerror = () => { showError('Failed to read file'); };
   rd.onload = e => {
-    status.textContent = '/// Parsing... ///';
-    setTimeout(() => {
-      try {
-        loadData(e.target.result);
-        status.textContent = `/// ${totalRows.toLocaleString()} tracks loaded ///`;
-        setTimeout(() => { status.style.display = 'none'; }, 3000);
-      } catch (err) { status.textContent = `/// ${err.message} ///`; }
-    }, 30);
+    const text = e.target.result;
+    fileInput.value = ''; // allow re-uploading the same file
+
+    if (isXML(text)) {
+      // XML: must use main thread (DOMParser unavailable in workers)
+      status.textContent = '/// Parsing XML... ///';
+      setProgress(55);
+      setTimeout(() => {
+        try {
+          const { headers: h, rows: r } = parseXML(text);
+          if (!r.length) { showError('No records found in XML'); return; }
+          setProgress(90);
+          totalRows = r.length;
+          build(h, sample(r));
+          setProgress(100);
+          status.textContent = `/// ${totalRows.toLocaleString()} tracks loaded ///`;
+          hideProgress();
+          setTimeout(() => { status.style.display = 'none'; }, 3000);
+        } catch (err) { showError(err.message); }
+      }, 30);
+    } else {
+      // CSV: offload to Web Worker
+      status.textContent = '/// Parsing CSV... ///';
+      setProgress(50);
+      const worker = new Worker(_workerUrl);
+      const timeout = setTimeout(() => {
+        worker.terminate();
+        showError('Parsing timed out (>60s)');
+      }, 60000);
+
+      worker.onmessage = ev => {
+        const msg = ev.data;
+        if (msg.type === 'progress') {
+          setProgress(msg.pct);
+        } else if (msg.type === 'done') {
+          clearTimeout(timeout);
+          if (!msg.rows.length) { showError('No rows found in CSV'); worker.terminate(); return; }
+          totalRows = msg.totalRows;
+          setProgress(90);
+          build(msg.headers, msg.rows);
+          setProgress(100);
+          status.textContent = `/// ${totalRows.toLocaleString()} tracks loaded ///`;
+          hideProgress();
+          setTimeout(() => { status.style.display = 'none'; }, 3000);
+          worker.terminate();
+        } else if (msg.type === 'error') {
+          clearTimeout(timeout);
+          showError(msg.message);
+          worker.terminate();
+        }
+      };
+      worker.onerror = () => {
+        clearTimeout(timeout);
+        showError('CSV parser crashed');
+        worker.terminate();
+      };
+      worker.postMessage(text);
+    }
   };
   rd.readAsText(f);
 }
@@ -730,17 +852,60 @@ function handleFile(f) {
 // Upload button + drag-and-drop
 document.getElementById('upload-btn').addEventListener('click', () => document.getElementById('file-input').click());
 document.getElementById('file-input').addEventListener('change', e => { if (e.target.files[0]) handleFile(e.target.files[0]); });
-document.body.addEventListener('dragover', e => { e.preventDefault(); });
-document.body.addEventListener('drop', e => { e.preventDefault(); if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]); });
 
-// Auto-load default library on startup
+// Drag-and-drop with visual feedback (counter pattern prevents child-element flicker)
+let _dragCounter = 0;
+document.body.addEventListener('dragenter', e => {
+  e.preventDefault();
+  _dragCounter++;
+  document.body.classList.add('drag-over');
+});
+document.body.addEventListener('dragleave', e => {
+  e.preventDefault();
+  _dragCounter--;
+  if (_dragCounter <= 0) { _dragCounter = 0; document.body.classList.remove('drag-over'); }
+});
+document.body.addEventListener('dragover', e => { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; });
+document.body.addEventListener('drop', e => {
+  e.preventDefault();
+  _dragCounter = 0;
+  document.body.classList.remove('drag-over');
+  if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
+});
+
+// Auto-load default library on startup (with download progress)
 async function loadDefaultLibrary() {
+  const loadEl = document.getElementById('loading');
   try {
-    const text = await (await fetch('music_library.csv')).text();
+    const resp = await fetch('music_library.csv');
+    if (!resp.ok) throw new Error('fetch failed');
+    const contentLength = resp.headers.get('Content-Length');
+    let text;
+    if (contentLength && resp.body) {
+      const total = parseInt(contentLength, 10);
+      const reader = resp.body.getReader();
+      const chunks = [];
+      let received = 0;
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        chunks.push(value);
+        received += value.length;
+        const pct = Math.round((received / total) * 100);
+        loadEl.textContent = `/// Loading library ${pct}% ///`;
+      }
+      const buf = new Uint8Array(received);
+      let pos = 0;
+      for (const chunk of chunks) { buf.set(chunk, pos); pos += chunk.length; }
+      text = new TextDecoder().decode(buf);
+    } else {
+      // Fallback: no Content-Length (e.g. local file:// or gzipped)
+      text = await resp.text();
+    }
     loadData(text);
-    document.getElementById('loading').classList.add('hidden');
+    loadEl.classList.add('hidden');
   } catch {
-    document.getElementById('loading').textContent = '/// Error loading library ///';
+    loadEl.textContent = '/// Error loading library ///';
   }
 }
 
@@ -819,7 +984,18 @@ document.getElementById('t-autofly').addEventListener('click', function() {
   autoFly = this.classList.contains('on');
 });
 
-initScene();animate();loadDefaultLibrary();
+// ─── WebGL detection ───
+function checkWebGL() {
+  const c = document.createElement('canvas');
+  const gl = c.getContext('webgl2') || c.getContext('webgl');
+  if (!gl) {
+    document.getElementById('loading').textContent = '/// WebGL not supported — please use a modern browser ///';
+    return false;
+  }
+  return true;
+}
+
+if (checkWebGL()) { initScene(); animate(); loadDefaultLibrary(); }
 </script>
 </body>
 </html>
