@@ -289,12 +289,87 @@ const _workerBlob = new Blob([_workerCode], { type: 'application/javascript' });
 const _workerUrl = URL.createObjectURL(_workerBlob);
 
 // ─── XML Parser ───
+
+// Apple Music / iTunes plist XML parser
+function parsePlistDict(dictEl) {
+  const obj = {};
+  const children = dictEl.children;
+  for (let i = 0; i < children.length - 1; i++) {
+    if (children[i].tagName === 'key') {
+      const key = children[i].textContent;
+      const val = children[i + 1];
+      const tag = val.tagName;
+      if (tag === 'string' || tag === 'integer' || tag === 'real') {
+        obj[key] = val.textContent;
+      } else if (tag === 'true') {
+        obj[key] = 'true';
+      } else if (tag === 'false') {
+        obj[key] = 'false';
+      } else if (tag === 'date') {
+        obj[key] = val.textContent;
+      }
+      // skip nested dict/array values (playlists, etc.)
+      i++; // advance past value
+    }
+  }
+  return obj;
+}
+
+function parsePlistTracks(doc) {
+  // Structure: <plist><dict> ... <key>Tracks</key><dict> <key>ID</key><dict>track</dict> ... </dict>
+  const root = doc.documentElement; // <plist>
+  const topDict = root.querySelector(':scope > dict');
+  if (!topDict) return null;
+
+  // Find the "Tracks" dict
+  let tracksDict = null;
+  const topChildren = topDict.children;
+  for (let i = 0; i < topChildren.length - 1; i++) {
+    if (topChildren[i].tagName === 'key' && topChildren[i].textContent === 'Tracks') {
+      const next = topChildren[i + 1];
+      if (next.tagName === 'dict') tracksDict = next;
+      break;
+    }
+  }
+  if (!tracksDict) return null;
+
+  // Each track: <key>ID</key><dict>...</dict>
+  const rows = [];
+  const headerSet = new Set();
+  const trackChildren = tracksDict.children;
+  for (let i = 0; i < trackChildren.length - 1; i++) {
+    if (trackChildren[i].tagName === 'key') {
+      const next = trackChildren[i + 1];
+      if (next.tagName === 'dict') {
+        const track = parsePlistDict(next);
+        for (const k of Object.keys(track)) headerSet.add(k);
+        rows.push(track);
+      }
+      i++; // advance past value
+    }
+  }
+  if (!rows.length) return null;
+
+  // Prioritize useful columns for the visualizer
+  const priority = ['Name', 'Artist', 'Album', 'Genre', 'Year', 'Total Time', 'Track Number', 'Play Count', 'Date Added'];
+  const rest = [...headerSet].filter(h => !priority.includes(h)).sort();
+  const headers = [...priority.filter(h => headerSet.has(h)), ...rest];
+
+  return { headers, rows };
+}
+
 function parseXML(text) {
   const parser = new DOMParser();
   const doc = parser.parseFromString(text, 'application/xml');
   if (doc.querySelector('parsererror')) return { headers: [], rows: [] };
 
-  // Find the repeating record elements (children of the root, or one level deeper)
+  // Detect Apple Music / iTunes plist format
+  if (doc.documentElement.tagName === 'plist') {
+    const result = parsePlistTracks(doc);
+    if (result) return result;
+  }
+
+  // Generic XML: find repeating record elements
   const root = doc.documentElement;
   let records = [];
   // Try direct children first
