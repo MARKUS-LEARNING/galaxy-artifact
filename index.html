@@ -212,26 +212,24 @@ import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 
 const PALETTES = {
-  neon:     ['#FF006E','#8338EC','#3A86FF','#06D6A0','#FB5607','#FFBE0B','#FF69B4','#00F5D4','#9B5DE5','#F15BB5','#FEE440','#00BBF9','#FF4CC3','#72EFDD','#C77DFF'],
-  pastel:   ['#FFB3C6','#B8A9C9','#A0C4FF','#CAFFBF','#FFD6A5','#FDFFB6','#FFC6FF','#BDE0FE','#C8B6FF','#FFADAD','#E2F0CB','#C1FBA4','#FBC4AB','#98F5E1','#D0BFFF'],
+  phantom:  ['#5D0066','#76FF00','#F04FFF','#A300B3','#580C82','#9B30FF','#00FF41','#D946EF','#7B2D8E','#39004D','#B24BF3','#4AFF23','#E879F9','#6B21A8','#3B0764'],
+  magma:    ['#E52C2C','#F58D39','#FE4773','#FF2D00','#FF6B35','#D62828','#F77F00','#FCBF49','#FF4500','#E63946','#FF7043','#EF5350','#FF8A65','#F4511E','#BF360C'],
+  rogue:    ['#FE4773','#46B3A5','#90335D','#9BFDCE','#FFC0D3','#FF2E63','#08D9D6','#7C2653','#52D1A9','#FFB4C8','#E84393','#00B4D8','#A83279','#6DFFE0','#FF85A1'],
+  pastoral: ['#176A90','#466B5A','#FADBDB','#88A290','#B4CFB0','#1A759F','#558564','#FFE5E5','#6B9080','#A4C3B2','#168AAD','#3E6B53','#F0C6C6','#97B5A6','#CCE3DE'],
+  noir:     ['#030303','#CC0000','#C6A25A','#EBB277','#4A4635','#1A1A1A','#8B0000','#D4A853','#C9956B','#3D3A2E','#0D0D0D','#A30000','#B8963E','#D4A574','#5C5742'],
+  chrome:   ['#000000','#800808','#F69697','#FF0000','#4A4A4A','#1A1A1A','#A01010','#FFB3B3','#CC0000','#636363','#0D0D0D','#600808','#FF8080','#E60000','#2D2D2D'],
+  ronin:    ['#D9C7C7','#7C8190','#1A1E41','#D9D2C6','#8C7A6B','#C4B0B0','#5C6170','#131730','#BFB8AC','#6B5D52','#E8D8D8','#9A9EAD','#252A50','#ADA79C','#7D6E63'],
+  analog:   ['#76FF00','#ED8008','#ED3F1C','#5F503E','#A0A0A0','#5BCC00','#D97706','#C43414','#4A3F30','#808080','#8AFF33','#F59E0B','#FF5733','#6B5C4A','#B0B0B0'],
+  regiment: ['#00235D','#AE0028','#656B5C','#CEC2A9','#7AA1CB','#001A47','#8B0020','#4F5447','#B8AD94','#5E87B3','#002D73','#C40030','#7A8170','#E0D5BE','#96B7D9'],
   mono:     ['#111','#222','#333','#444','#555','#666','#777','#888','#999','#aaa','#bbb','#ccc','#ddd','#e5e5e5','#f0f0f0'],
-  camo:     ['#4B5320','#6B8E23','#556B2F','#8B8B00','#A9A96A','#3B3C36','#2E2D24','#7C7B6F','#C2B280','#D2C6A5','#5E5B4C','#8F8B76','#3D4228','#6E7153','#4A5530'],
-  yellow:   ['#FFD700','#FFC300','#FFE033','#FFEA00','#F5C71A','#E6B800','#CCB400','#FFD54F','#FFEB3B','#FFF176','#B8960C','#9E8400','#FFCC02','#FFB300','#F9A825'],
-  vapor:    ['#FF71CE','#01CDFE','#05FFA1','#B967FF','#FFFB96','#FF00FF','#00FFFF','#FF6EC7','#7B68EE','#00FF7F','#FF1493','#00CED1','#DA70D6','#40E0D0','#FFD700'],
-  forest:   ['#2D6A4F','#40916C','#52B788','#74C69D','#95D5B2','#1B4332','#344E41','#3A5A40','#588157','#A3B18A','#DAD7CD','#B7E4C7','#D8F3DC','#081C15','#004B23'],
-  polka:    ['#FF0000','#FFFFFF','#0000FF','#FFFFFF','#FFD700','#FFFFFF','#FF69B4','#FFFFFF','#00CC00','#FFFFFF','#FF6600','#FFFFFF','#9933FF','#FFFFFF','#00CCCC'],
-  sunset:   ['#FF5E5B','#D8A47F','#FFBA49','#EF476F','#FF8C42','#FFC15E','#CE4257','#E76F51','#F4A261','#E9C46A','#264653','#2A9D8F','#F77F00','#FCBF49','#D62828'],
-  ice:      ['#E0F7FA','#B2EBF2','#80DEEA','#4DD0E1','#26C6DA','#00BCD4','#0097A7','#006064','#84FFFF','#18FFFF','#A7FFEB','#64FFDA','#B3E5FC','#81D4FA','#4FC3F7'],
-  brutalist:['#FF0000','#0000FF','#FFFF00','#000000','#FF00FF','#00FF00','#FF4400','#0044FF','#CCFF00','#222222','#FF0088','#00FFAA','#FF6600','#0066FF','#AAFF00'],
-  rust:     ['#8B2500','#A0522D','#B7410E','#CD661D','#D2691E','#8B4513','#A52A2A','#993300','#CC5500','#E07020','#6B3410','#884422','#704214','#C06020','#553311'],
-  tokyo:    ['#F72585','#7209B7','#3A0CA3','#4361EE','#4CC9F0','#560BAD','#480CA8','#3F37C9','#4895EF','#B5179E','#FF006E','#8900F2','#A100F2','#6A00F4','#5E60CE'],
 };
 const BACKGROUNDS = {
   white: '#ffffff', black: '#0a0a0a', midnight: '#0d1b2a', cream: '#f5f0e8', slate: '#1e293b',
   charcoal: '#2b2b2b', navy: '#0a1628', plum: '#1a0a2e', forest: '#0a1a0a', ember: '#1a0800',
   fog: '#c8c8c8', dusk: '#2d1b4e', steel: '#3a3f47', sand: '#d4c5a9', ice: '#e8f0f8',
+  abyss: '#0A0A0F', deep: '#1A1E41',
 };
-let activePalette = 'neon';
+let activePalette = 'phantom';
 let activeBg = 'white';
 const OTHER = '#bbbbbb';
 const MAX_GENRES = 15;
@@ -529,7 +527,7 @@ function build(hdrs, rows){
 
   // Assign colors
   colorMap = {};
-  const pal = PALETTES[activePalette] || PALETTES.neon;
+  const pal = PALETTES[activePalette] || PALETTES.phantom;
   topGenres.forEach((g,i) => { colorMap[g] = pal[i % pal.length]; });
 
   function getGenreBucket(row) {
