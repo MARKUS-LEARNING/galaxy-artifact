@@ -76,6 +76,8 @@
   #album-card .ac-link.ac-yt:hover { background: #cc0000; }
   #album-card .ac-link.ac-spotify:hover { background: #1db954; }
   #album-card .ac-link.ac-apple:hover { background: #fa243c; }
+  #album-card .ac-link.ac-discogs:hover { background: #333; }
+  #album-card .ac-link.ac-ebay:hover { background: #e53238; }
 
   /* Heart button on album card */
   #album-card .ac-heart {
@@ -461,6 +463,8 @@
     <a class="ac-link ac-yt" href="#" target="_blank" rel="noopener noreferrer">YouTube</a>
     <a class="ac-link ac-spotify" href="#" target="_blank" rel="noopener noreferrer">Spotify</a>
     <a class="ac-link ac-apple" href="#" target="_blank" rel="noopener noreferrer">Apple Music</a>
+    <a class="ac-link ac-discogs" href="#" target="_blank" rel="noopener noreferrer">Discogs</a>
+    <a class="ac-link ac-ebay" href="#" target="_blank" rel="noopener noreferrer">eBay</a>
   </div>
 </div>
 
@@ -958,6 +962,14 @@ function buildSpotifySearchUrl(song, artist) {
 function buildAppleMusicSearchUrl(song, artist) {
   const query = [artist, song].filter(Boolean).join(' ');
   return 'https://music.apple.com/us/search?term=' + encodeURIComponent(query);
+}
+function buildDiscogsSearchUrl(song, artist) {
+  const query = [artist, song].filter(Boolean).join(' ');
+  return 'https://www.discogs.com/search/?q=' + encodeURIComponent(query) + '&type=all';
+}
+function buildEbaySearchUrl(song, artist) {
+  const query = [artist, song].filter(Boolean).join(' ') + ' vinyl';
+  return 'https://www.ebay.com/sch/i.html?_nkw=' + encodeURIComponent(query);
 }
 
 function safeHref(url) {
@@ -1515,6 +1527,8 @@ function onClick(e) {
     card.querySelector('.ac-yt').href = safeHref(buildYouTubeSearchUrl(song, artist));
     card.querySelector('.ac-spotify').href = safeHref(buildSpotifySearchUrl(song, artist));
     card.querySelector('.ac-apple').href = safeHref(buildAppleMusicSearchUrl(song, artist));
+    card.querySelector('.ac-discogs').href = safeHref(buildDiscogsSearchUrl(song, artist));
+    card.querySelector('.ac-ebay').href = safeHref(buildEbaySearchUrl(song, artist));
 
     // Sync heart state
     const heartBtn = card.querySelector('.ac-heart');
@@ -2141,6 +2155,8 @@ function pinArtifactByRow(targetRow) {
         card.querySelector('.ac-yt').href = safeHref(buildYouTubeSearchUrl(song, artist));
         card.querySelector('.ac-spotify').href = safeHref(buildSpotifySearchUrl(song, artist));
         card.querySelector('.ac-apple').href = safeHref(buildAppleMusicSearchUrl(song, artist));
+        card.querySelector('.ac-discogs').href = safeHref(buildDiscogsSearchUrl(song, artist));
+        card.querySelector('.ac-ebay').href = safeHref(buildEbaySearchUrl(song, artist));
         const heartBtn = card.querySelector('.ac-heart');
         heartBtn.classList.toggle('hearted', isHearted(d));
         heartBtn.classList.remove('jumping');
