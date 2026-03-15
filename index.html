@@ -141,6 +141,13 @@
   }
   #search-bar input::placeholder { color: #bbb; letter-spacing: 2px; font-size: 10px; }
   #search-bar input:focus { border-color: #999; background: rgba(255,255,255,0.97); }
+  #search-count {
+    position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
+    font-family: inherit; font-size: 9px; letter-spacing: 1px;
+    color: #aaa; pointer-events: none;
+    opacity: 0; transition: opacity 0.2s ease;
+  }
+  #search-count.visible { opacity: 1; }
   #search-results {
     position: fixed; top: 52px; left: 50%; transform: translateX(-50%);
     z-index: 11; width: 380px; max-height: 60vh; overflow-y: auto;
@@ -424,8 +431,9 @@
   </div>
 </div>
 
-<div id="search-bar">
-  <input type="text" id="search-input" placeholder="Search artifacts..." autocomplete="off">
+<div id="search-bar" style="position:relative;">
+  <input type="text" id="search-input" placeholder="Search artifacts..." autocomplete="off" style="padding-right:60px;">
+  <span id="search-count"></span>
 </div>
 <div id="search-results"></div>
 
@@ -583,7 +591,7 @@ let showLabels = true;
 let scaleMul = 1.0;
 let flyOffset = 0;
 let autoFly = true;
-let layoutMode = 'layers'; // 'layers' | 'sphere' | 'helix' | 'grid' | 'spiral' | 'stream'
+let layoutMode = 'layers'; // 'layers' | 'sphere' | 'helix' | 'grid' | 'stream' | 'schotter' | 'oscillons' | 'mobiles'
 let figure8Mode = false;
 let waveMode = false;
 let selectedCard = null; // currently shown card entry
@@ -1103,7 +1111,6 @@ function build(hdrs, rows){
   const SPHERE_RADIUS = 80;
   const HELIX_RADIUS = 25;
   const HELIX_PITCH = 0.6;
-  const SPIRAL_ARMS = Math.min(topGenres.length + 1, 6);
 
   // Genre row positions (top genres evenly spaced, Other at bottom)
   const genreY = {};
@@ -1201,17 +1208,43 @@ function build(hdrs, rows){
         y = (allBuckets.length / 2 - bucketIdx) * gridSpacing * 1.8;
         z = (Math.random() - 0.5) * 2;
 
-      } else if (layoutMode === 'spiral') {
-        // Logarithmic spiral galaxy arms
-        const armIdx = bucketIdx % SPIRAL_ARMS;
-        const armAngle = (armIdx / SPIRAL_ARMS) * Math.PI * 2;
-        const dist = 10 + yearNorm * 70;
-        const spiralTightness = 2.5;
-        const theta = armAngle + Math.log(dist / 10 + 1) * spiralTightness;
-        const scatter = (1 - yearNorm * 0.5) * 6;
-        x = dist * Math.cos(theta) + (Math.random() - 0.5) * scatter;
-        z = dist * Math.sin(theta) + (Math.random() - 0.5) * scatter;
-        y = (Math.random() - 0.5) * (3 + yearNorm * 2);
+      } else if (layoutMode === 'schotter') {
+        // Georg Nees' Schotter — order dissolves into chaos
+        const cols = Math.max(Math.ceil(Math.sqrt(rows.length / allBuckets.length)), 6);
+        const colIdx = Math.floor(yearNorm * (cols - 1));
+        const gridSp = 3.2;
+        const rowIdx = allBuckets.length - 1 - bucketIdx;
+        const chaos = rowIdx / (allBuckets.length - 1 || 1); // 0=top(ordered), 1=bottom(chaotic)
+        const chaosAmt = chaos * chaos; // quadratic ramp
+        x = (colIdx - cols / 2) * gridSp + (Math.random() - 0.5) * chaosAmt * gridSp * 1.8;
+        y = (allBuckets.length / 2 - bucketIdx) * gridSp * 1.6 + (Math.random() - 0.5) * chaosAmt * gridSp * 1.5;
+        z = (Math.random() - 0.5) * chaosAmt * 12;
+
+      } else if (layoutMode === 'oscillons') {
+        // Laposky's oscilloscope — Lissajous curves from sine generators
+        const curveIdx = bucketIdx % 4;
+        const freqPairs = [[3,2],[5,4],[7,6],[5,3]];
+        const [fA, fB] = freqPairs[curveIdx];
+        const phaseOff = (bucketIdx / (allBuckets.length || 1)) * Math.PI;
+        const theta = yearNorm * Math.PI * 2 * 3; // 3 full loops
+        const r = 35 + bucketIdx * 3;
+        x = r * Math.sin(fA * theta + phaseOff);
+        y = r * Math.cos(fB * theta);
+        z = 15 * Math.sin(theta * 2 + phaseOff) + (Math.random() - 0.5) * 4;
+        x += (Math.random() - 0.5) * 3;
+        y += (Math.random() - 0.5) * 3;
+
+      } else if (layoutMode === 'mobiles') {
+        // Pask's Colloquy of Mobiles — hanging kinetic sculpture
+        const branchAngle = (bucketIdx / (allBuckets.length || 1)) * Math.PI * 2;
+        const armLen = 30 + bucketIdx * 5;
+        const branchX = armLen * Math.cos(branchAngle);
+        const branchZ = armLen * Math.sin(branchAngle);
+        const hangDepth = -yearNorm * 60 - Math.random() * 10;
+        const swing = Math.sin(yearNorm * Math.PI * 4 + bucketIdx) * 5;
+        x = branchX + swing + (Math.random() - 0.5) * 8;
+        y = hangDepth;
+        z = branchZ + (Math.random() - 0.5) * 8;
 
       } else if (layoutMode === 'stream') {
         // Flowing river — genre streams that weave and converge
@@ -1238,7 +1271,19 @@ function build(hdrs, rows){
       const s = isOther ? 0.5 : 0.65 + Math.random() * 0.35;
       dummy.position.set(x, y, z);
       dummy.scale.set(s, s, s);
-      dummy.rotation.set(Math.random()*3, Math.random()*3, Math.random()*3);
+      if (layoutMode === 'schotter') {
+        // Nees-style: rotation increases with row (order → chaos)
+        const rowIdx = allBuckets.length - 1 - bucketIdx;
+        const chaos = (rowIdx / (allBuckets.length - 1 || 1));
+        const chaosAmt = chaos * chaos;
+        dummy.rotation.set(
+          (Math.random() - 0.5) * chaosAmt * Math.PI,
+          (Math.random() - 0.5) * chaosAmt * Math.PI * 0.5,
+          (Math.random() - 0.5) * chaosAmt * Math.PI
+        );
+      } else {
+        dummy.rotation.set(Math.random()*3, Math.random()*3, Math.random()*3);
+      }
       dummy.updateMatrix();
       im.setMatrixAt(li, dummy.matrix);
 
@@ -1305,16 +1350,39 @@ function build(hdrs, rows){
         scene.add(sprite); labelSprites.push(sprite);
       });
 
-    } else if (layoutMode === 'spiral') {
-      // Arm labels at outer edge
+    } else if (layoutMode === 'schotter') {
+      // Genre labels along left edge, Nees-style
+      const gridSp = 3.2;
+      const cols = Math.max(Math.ceil(Math.sqrt(rows.length / allBuckets.length)), 6);
       allBuckets.forEach((bucket, i) => {
         if (bucket === '_other_') return;
-        const armIdx = i % SPIRAL_ARMS;
-        const armAngle = (armIdx / SPIRAL_ARMS) * Math.PI * 2;
-        const dist = 85;
-        const theta = armAngle + Math.log(dist / 10 + 1) * 2.5;
         const sprite = makeLabel(bucket, colorMap[bucket] || OTHER);
-        sprite.position.set(dist * Math.cos(theta), 5, dist * Math.sin(theta));
+        sprite.position.set(-cols / 2 * gridSp - 10, (allBuckets.length / 2 - i) * gridSp * 1.6, 0);
+        scene.add(sprite); labelSprites.push(sprite);
+      });
+
+    } else if (layoutMode === 'oscillons') {
+      // Genre labels near their Lissajous curves
+      allBuckets.forEach((bucket, i) => {
+        if (bucket === '_other_') return;
+        const curveIdx = i % 4;
+        const freqPairs = [[3,2],[5,4],[7,6],[5,3]];
+        const [fA, fB] = freqPairs[curveIdx];
+        const phaseOff = (i / (allBuckets.length || 1)) * Math.PI;
+        const r = 35 + i * 3;
+        const sprite = makeLabel(bucket, colorMap[bucket] || OTHER);
+        sprite.position.set(r * Math.sin(fA * 0.3 + phaseOff) + r * 0.3, r * Math.cos(fB * 0.3) + 5, 0);
+        scene.add(sprite); labelSprites.push(sprite);
+      });
+
+    } else if (layoutMode === 'mobiles') {
+      // Genre labels at branch origins
+      allBuckets.forEach((bucket, i) => {
+        if (bucket === '_other_') return;
+        const branchAngle = (i / (allBuckets.length || 1)) * Math.PI * 2;
+        const armLen = 30 + i * 5;
+        const sprite = makeLabel(bucket, colorMap[bucket] || OTHER);
+        sprite.position.set(armLen * Math.cos(branchAngle), 5, armLen * Math.sin(branchAngle));
         scene.add(sprite); labelSprites.push(sprite);
       });
 
@@ -1371,9 +1439,15 @@ function build(hdrs, rows){
   } else if (layoutMode === 'grid') {
     controls.target.copy(centroid);
     camera.position.set(centroid.x, centroid.y + 30, centroid.z + 60);
-  } else if (layoutMode === 'spiral') {
+  } else if (layoutMode === 'schotter') {
+    controls.target.copy(centroid);
+    camera.position.set(centroid.x, centroid.y + 20, centroid.z + 55);
+  } else if (layoutMode === 'oscillons') {
     controls.target.set(0, 0, 0);
-    camera.position.set(0, 90, 90);
+    camera.position.set(0, 20, 120);
+  } else if (layoutMode === 'mobiles') {
+    controls.target.set(0, -25, 0);
+    camera.position.set(80, 15, 80);
   } else if (layoutMode === 'stream') {
     controls.target.copy(centroid);
     camera.position.set(centroid.x, centroid.y + 20, centroid.z + X_SPREAD * 0.4);
@@ -1422,7 +1496,7 @@ function makeLabel(text, color){
 const _floatDummy = new THREE.Object3D();
 function updateFloat(t) {
   const isSphere = layoutMode === 'sphere';
-  const isRadial = isSphere || layoutMode === 'helix' || layoutMode === 'spiral';
+  const isRadial = isSphere || layoutMode === 'helix' || layoutMode === 'oscillons' || layoutMode === 'mobiles';
   const spinAngle = isRadial && autoFly && !figure8Mode ? flyOffset * 0.3 : 0;
   const cosS = Math.cos(spinAngle), sinS = Math.sin(spinAngle);
 
@@ -1446,12 +1520,14 @@ function updateFloat(t) {
         if (waveMode) {
           px = d.basePos.x; py = d.basePos.y; pz = d.basePos.z;
         } else {
-          const floatScale = layoutMode === 'grid' ? 0.15 : 1;
+          let floatScale = 1;
+          if (layoutMode === 'grid') floatScale = 0.15;
+          else if (layoutMode === 'schotter') floatScale = 0.1 + (1 - d.basePos.y / 30) * 0.4;
           px = d.basePos.x + Math.sin(t * d.freq + d.phase) * d.amp * floatScale;
           py = d.basePos.y + Math.cos(t * d.freq * 0.7 + d.phase + 1.0) * d.amp * 0.6 * floatScale;
           pz = d.basePos.z;
         }
-        if (autoFly && layoutMode !== 'grid') {
+        if (autoFly && layoutMode !== 'grid' && layoutMode !== 'schotter') {
           pz = ((d.basePos.z + flyOffset) % FLY_DEPTH + FLY_DEPTH) % FLY_DEPTH - FLY_DEPTH / 2;
         }
       }
@@ -1823,7 +1899,7 @@ function animate(){
   }
 
   // Rotate labels with radial layouts
-  const isRadialLayout = layoutMode === 'sphere' || layoutMode === 'helix' || layoutMode === 'spiral';
+  const isRadialLayout = layoutMode === 'sphere' || layoutMode === 'helix' || layoutMode === 'oscillons' || layoutMode === 'mobiles';
   if (isRadialLayout && autoFly && !figure8Mode) {
     const spin = flyOffset * 0.3;
     const cs = Math.cos(spin), ss = Math.sin(spin);
@@ -2047,7 +2123,7 @@ document.getElementById('ctrl-toggle').addEventListener('click', () => {
 
 // Layout chips
 const layoutRow = document.getElementById('layout-row');
-['layers', 'sphere', 'helix', 'spiral', 'grid', 'stream'].forEach(mode => {
+['layers', 'sphere', 'helix', 'grid', 'stream', 'schotter', 'oscillons', 'mobiles'].forEach(mode => {
   const btn = document.createElement('button');
   btn.className = 'chip' + (mode === layoutMode ? ' on' : '');
   btn.textContent = mode;
@@ -2169,10 +2245,14 @@ const searchInput = document.getElementById('search-input');
 const searchResults = document.getElementById('search-results');
 let _searchDebounce = null;
 
+const searchCount = document.getElementById('search-count');
+
 function searchArtifacts(query) {
   if (!query || query.length < 2 || !masterData.length) {
     searchResults.classList.remove('open');
     searchResults.innerHTML = '';
+    searchCount.textContent = '';
+    searchCount.classList.remove('visible');
     return;
   }
   const q = query.toLowerCase();
@@ -2193,9 +2273,14 @@ function searchArtifacts(query) {
     if (matched) matches.push({ row, index: i, matchCol });
   }
 
+  // Update count badge in search bar
+  searchCount.textContent = matches.length + ' found';
+  searchCount.classList.add('visible');
+
   searchResults.innerHTML = '';
   if (matches.length === 0) {
     searchResults.innerHTML = '<div class="sr-empty">No artifacts found</div>';
+    searchCount.textContent = 'no matches';
     searchResults.classList.add('open');
     return;
   }
@@ -2219,11 +2304,7 @@ function searchArtifacts(query) {
 
     item.addEventListener('click', () => {
       searchResults.classList.remove('open');
-      searchInput.value = '';
-      searchQuery = '';
-      rebuildViz();
-      // Pin after rebuild so the artifact exists in the scene
-      setTimeout(() => pinArtifactByRow(m.row), 50);
+      pinArtifactByRow(m.row);
     });
 
     searchResults.appendChild(item);
@@ -2293,7 +2374,15 @@ searchInput.addEventListener('input', () => {
 });
 
 searchInput.addEventListener('focus', () => {
-  if (searchInput.value.trim().length >= 2) searchArtifacts(searchInput.value.trim());
+  const q = searchInput.value.trim();
+  if (q.length >= 2) {
+    // Re-open existing results if they were just hidden
+    if (searchResults.children.length > 0) {
+      searchResults.classList.add('open');
+    } else {
+      searchArtifacts(q);
+    }
+  }
 });
 
 document.addEventListener('click', (e) => {
