@@ -67,9 +67,6 @@
     font-size: 7px; letter-spacing: 2px; text-transform: uppercase;
     color: #767676; margin-bottom: 2px; user-select: none;
   }
-  #nav-panel .nav-row {
-    display: flex; gap: 2px; align-items: center;
-  }
   #nav-panel .nav-btn {
     width: 28px; height: 28px; border: 1px solid #e0e0e0;
     border-radius: 4px; background: rgba(255,255,255,0.8);
@@ -87,8 +84,6 @@
     letter-spacing: 2px; text-transform: uppercase;
     border-radius: 4px;
   }
-  #nav-panel .nav-spacer { width: 28px; height: 28px; }
-
   /* Mobile hamburger menu */
   #mobile-menu-btn {
     display: none; position: fixed; bottom: 20px; right: 20px; z-index: 25;
@@ -566,7 +561,7 @@
 </head>
 <body>
 
-<div id="hud">
+<div id="hud" style="display:none;">
   <h1>Galaxy Artifact</h1>
   <div class="sub" id="hud-sub"></div>
 </div>
@@ -604,26 +599,6 @@
 <div id="search-results" role="listbox"></div>
 
 <div id="nav-panel">
-  <div class="nav-group">
-    <div class="nav-label">Move</div>
-    <div class="nav-row">
-      <div class="nav-spacer"></div>
-      <button class="nav-btn" data-dir="fwd" title="Forward (W)" aria-label="Move forward">&#9650;</button>
-      <div class="nav-spacer"></div>
-    </div>
-    <div class="nav-row">
-      <button class="nav-btn" data-dir="left" title="Left (A)" aria-label="Move left">&#9664;</button>
-      <button class="nav-btn" data-dir="back" title="Back (S)" aria-label="Move backward">&#9660;</button>
-      <button class="nav-btn" data-dir="right" title="Right (D)" aria-label="Move right">&#9654;</button>
-    </div>
-  </div>
-  <div class="nav-group">
-    <div class="nav-label">Height</div>
-    <div class="nav-row">
-      <button class="nav-btn" data-dir="up" title="Up (Q)" aria-label="Move up">&#8593;</button>
-      <button class="nav-btn" data-dir="down" title="Down (E)" aria-label="Move down">&#8595;</button>
-    </div>
-  </div>
   <div class="nav-group">
     <button class="nav-btn nav-home" id="nav-home" title="Reset camera" aria-label="Reset camera view">Reset</button>
   </div>
@@ -1919,31 +1894,7 @@ function fly(){
   if(keys.e){camera.position.addScaledVector(_flyUp,-sp);controls.target.addScaledVector(_flyUp,-sp)}
 }
 
-// ─── Navigation Panel (Pointer Events for mobile support) ───
-let _navInterval = null;
-document.getElementById('nav-panel').addEventListener('pointerdown', (e) => {
-  const btn = e.target.closest('.nav-btn[data-dir]');
-  if (!btn) return;
-  e.preventDefault();
-  const dir = btn.dataset.dir;
-  const move = () => {
-    if (figure8Mode && autoFly) return;
-    const sp = flySpeed;
-    camera.getWorldDirection(_flyFwd); _flyFwd.y = 0; _flyFwd.normalize();
-    _flyRt.crossVectors(_flyFwd, camera.up).normalize();
-    if (dir === 'fwd') { camera.position.addScaledVector(_flyFwd, sp); controls.target.addScaledVector(_flyFwd, sp); }
-    if (dir === 'back') { camera.position.addScaledVector(_flyFwd, -sp); controls.target.addScaledVector(_flyFwd, -sp); }
-    if (dir === 'left') { camera.position.addScaledVector(_flyRt, -sp); controls.target.addScaledVector(_flyRt, -sp); }
-    if (dir === 'right') { camera.position.addScaledVector(_flyRt, sp); controls.target.addScaledVector(_flyRt, sp); }
-    if (dir === 'up') { camera.position.addScaledVector(_flyUp, sp); controls.target.addScaledVector(_flyUp, sp); }
-    if (dir === 'down') { camera.position.addScaledVector(_flyUp, -sp); controls.target.addScaledVector(_flyUp, -sp); }
-  };
-  move();
-  _navInterval = setInterval(move, 50);
-});
-document.addEventListener('pointerup', () => { clearInterval(_navInterval); _navInterval = null; });
-document.addEventListener('pointercancel', () => { clearInterval(_navInterval); _navInterval = null; });
-
+// ─── Navigation Panel ───
 document.getElementById('nav-home').addEventListener('click', () => {
   if (headers.length && masterData.length) rebuildViz();
 });
