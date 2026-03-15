@@ -117,6 +117,49 @@
 
   #album-card.pinned { border-left: 3px solid #555; }
 
+  /* Search bar */
+  #search-bar {
+    position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
+    z-index: 12; display: flex; align-items: center; gap: 0;
+  }
+  #search-bar input {
+    font-family: inherit; font-size: 12px; letter-spacing: 1px;
+    padding: 7px 14px; width: 320px;
+    background: rgba(255,255,255,0.92); backdrop-filter: blur(12px);
+    border: 1px solid #ddd; border-radius: 3px;
+    color: #333; outline: none;
+  }
+  #search-bar input::placeholder { color: #bbb; letter-spacing: 2px; font-size: 10px; }
+  #search-bar input:focus { border-color: #999; background: rgba(255,255,255,0.97); }
+  #search-results {
+    position: fixed; top: 52px; left: 50%; transform: translateX(-50%);
+    z-index: 11; width: 380px; max-height: 340px; overflow-y: auto;
+    background: rgba(255,255,255,0.97); backdrop-filter: blur(12px);
+    border: 1px solid #eee; border-radius: 4px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+    display: none;
+  }
+  #search-results.open { display: block; }
+  .sr-item {
+    padding: 8px 14px; cursor: pointer;
+    border-bottom: 1px solid #f5f5f5;
+    transition: background 0.1s;
+  }
+  .sr-item:hover { background: #f8f8f8; }
+  .sr-item:last-child { border-bottom: none; }
+  .sr-name { font-size: 11px; font-weight: 700; letter-spacing: 1px; color: #222; }
+  .sr-sub { font-size: 9px; letter-spacing: 1px; color: #888; margin-top: 2px; }
+  .sr-match { background: rgba(231,76,60,0.12); padding: 0 2px; border-radius: 2px; }
+  .sr-empty {
+    padding: 16px 14px; text-align: center;
+    font-size: 9px; letter-spacing: 1px; color: #bbb;
+  }
+  .sr-hint {
+    padding: 8px 14px; text-align: center;
+    font-size: 8px; letter-spacing: 1px; color: #ccc;
+    border-top: 1px solid #f0f0f0;
+  }
+
   /* Customize panel */
   #ctrl-toggle {
     position: fixed; top: 20px; right: 20px; z-index: 12;
@@ -351,6 +394,11 @@
     <div class="ub-progress" id="upload-progress"><div class="ub-progress-fill" id="upload-progress-fill"></div></div>
   </div>
 </div>
+
+<div id="search-bar">
+  <input type="text" id="search-input" placeholder="Search artifacts..." autocomplete="off">
+</div>
+<div id="search-results"></div>
 
 <button id="ctrl-toggle">Customize</button>
 <div id="ctrl-panel">
@@ -1376,8 +1424,8 @@ function updateFloat(t) {
 
 // ─── Fly ───
 const keys={};
-function onKey(e){if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','w','a','s','d'].includes(e.key)){e.preventDefault();keys[e.key]=true}}
-function onKeyUp(e){keys[e.key]=false}
+function onKey(e){const t=e.target.tagName;if(t==='INPUT'||t==='SELECT'||t==='TEXTAREA')return;if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','w','a','s','d'].includes(e.key)){e.preventDefault();keys[e.key]=true}}
+function onKeyUp(e){const t=e.target.tagName;if(t==='INPUT'||t==='SELECT'||t==='TEXTAREA')return;keys[e.key]=false}
 function fly(){
   if (figure8Mode && autoFly) return;
   const sp=flySpeed;
@@ -1974,6 +2022,138 @@ document.getElementById('filter-clear').addEventListener('click', () => {
   document.getElementById('sort-dir').classList.add('on');
   document.querySelectorAll('#filter-list input[type=checkbox]').forEach(cb => cb.checked = false);
   rebuildViz();
+});
+
+// ─── Search Bar ───
+const searchInput = document.getElementById('search-input');
+const searchResults = document.getElementById('search-results');
+let _searchDebounce = null;
+
+function searchArtifacts(query) {
+  if (!query || query.length < 2 || !masterData.length) {
+    searchResults.classList.remove('open');
+    searchResults.innerHTML = '';
+    return;
+  }
+  const q = query.toLowerCase();
+  const matches = [];
+  const limit = 20;
+
+  for (let i = 0; i < masterData.length && matches.length < limit; i++) {
+    const row = masterData[i];
+    let matched = false;
+    let matchCol = '';
+    for (const col of headers) {
+      const val = (row[col] || '').toString();
+      if (val.toLowerCase().includes(q)) {
+        matched = true;
+        matchCol = col;
+        break;
+      }
+    }
+    if (matched) matches.push({ row, index: i, matchCol });
+  }
+
+  searchResults.innerHTML = '';
+  if (matches.length === 0) {
+    searchResults.innerHTML = '<div class="sr-empty">No artifacts found</div>';
+    searchResults.classList.add('open');
+    return;
+  }
+
+  const nameCol = findCol(headers, ['song','track','name','title']);
+  const artistCol = findCol(headers, ['artist','band','performer']);
+  const albumCol = findCol(headers, ['album']);
+
+  matches.forEach(m => {
+    const item = document.createElement('div');
+    item.className = 'sr-item';
+
+    const name = (nameCol && m.row[nameCol]) || '(untitled)';
+    const artist = (artistCol && m.row[artistCol]) || '';
+    const album = (albumCol && m.row[albumCol]) || '';
+    const sub = [artist, album].filter(Boolean).join(' \u00b7 ');
+
+    item.innerHTML =
+      '<div class="sr-name">' + highlightMatch(escapeHtml(name), q) + '</div>' +
+      (sub ? '<div class="sr-sub">' + highlightMatch(escapeHtml(sub), q) + '</div>' : '');
+
+    item.addEventListener('click', () => {
+      searchResults.classList.remove('open');
+      searchInput.value = '';
+      pinArtifactByRow(m.row);
+    });
+
+    searchResults.appendChild(item);
+  });
+
+  if (matches.length >= limit) {
+    searchResults.innerHTML += '<div class="sr-hint">Showing first ' + limit + ' results</div>';
+  }
+  searchResults.innerHTML += '<div class="sr-hint">AI-powered search coming soon</div>';
+  searchResults.classList.add('open');
+}
+
+function highlightMatch(html, query) {
+  const idx = html.toLowerCase().indexOf(query);
+  if (idx === -1) return html;
+  return html.slice(0, idx) + '<span class="sr-match">' + html.slice(idx, idx + query.length) + '</span>' + html.slice(idx + query.length);
+}
+
+function pinArtifactByRow(targetRow) {
+  for (const g of instanceGroups) {
+    for (let i = 0; i < g.data.length; i++) {
+      const d = g.data[i];
+      if (d.row === targetRow) {
+        const gi = g.mesh.userData.groupIdx;
+        if (pinnedInstance && pinnedInstance.groupIdx === gi && pinnedInstance.instanceId === i) return;
+        unpinInstance();
+        selectedCard = d;
+        const pos = d.basePos.clone();
+        pinnedInstance = { groupIdx: gi, instanceId: i, entry: d, originPos: pos, pinTime: clock.getElapsedTime(), settled: false };
+        unpinning = null;
+
+        const card = document.getElementById('album-card');
+        const r = d.row;
+        card.querySelector('.ac-name').textContent = r[d.nameCol] || '';
+        const parts = [];
+        if (d.artistCol && r[d.artistCol]) parts.push(r[d.artistCol]);
+        if (d.albumCol && r[d.albumCol]) parts.push(r[d.albumCol]);
+        if (d.yearCol && r[d.yearCol]) parts.push(r[d.yearCol]);
+        card.querySelector('.ac-sub').textContent = parts.join(' \u00b7 ');
+        const gc = colorMap[d.genreCol ? r[d.genreCol] : ''] || OTHER;
+        const ge = card.querySelector('.ac-genre');
+        ge.textContent = d.genreCol ? r[d.genreCol] : '';
+        ge.style.background = gc + '22'; ge.style.color = gc;
+        const artist = (d.artistCol && r[d.artistCol]) || '';
+        const song = r[d.nameCol] || '';
+        card.querySelector('.ac-yt').href = safeHref(buildYouTubeSearchUrl(song, artist));
+        card.querySelector('.ac-spotify').href = safeHref(buildSpotifySearchUrl(song, artist));
+        card.querySelector('.ac-apple').href = safeHref(buildAppleMusicSearchUrl(song, artist));
+        const heartBtn = card.querySelector('.ac-heart');
+        heartBtn.classList.toggle('hearted', isHearted(d));
+        heartBtn.classList.remove('jumping');
+        card.classList.add('pinned');
+        card.style.display = 'block';
+        return;
+      }
+    }
+  }
+}
+
+searchInput.addEventListener('input', () => {
+  clearTimeout(_searchDebounce);
+  _searchDebounce = setTimeout(() => searchArtifacts(searchInput.value.trim()), 200);
+});
+
+searchInput.addEventListener('focus', () => {
+  if (searchInput.value.trim().length >= 2) searchArtifacts(searchInput.value.trim());
+});
+
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('#search-bar') && !e.target.closest('#search-results')) {
+    searchResults.classList.remove('open');
+  }
 });
 
 // ─── WebGL detection ───
