@@ -67,6 +67,7 @@
     font-family: inherit; transition: background 0.15s;
   }
   #album-card .ac-yt:hover { background: #cc0000; }
+  #album-card.pinned { border-left: 3px solid #555; }
 
   /* Customize panel */
   #ctrl-toggle {
@@ -270,6 +271,7 @@ let flyOffset = 0;
 let autoFly = true;
 let layoutMode = 'layers'; // 'layers' | 'sphere'
 let selectedCard = null; // currently shown card entry
+let pinnedInstance = null; // { groupIdx, instanceId, entry }
 
 // ─── CSV Parser ───
 function csvSplitRows(t){const r=[];let c='',q=false;for(let i=0;i<t.length;i++){const ch=t[i];if(ch==='"'){q=!q;c+=ch}else if(ch==='\n'&&!q){r.push(c);c=''}else c+=ch}if(c.trim())r.push(c);return r}
@@ -569,7 +571,7 @@ function build(hdrs, rows){
     g.data = null;
   });
   labelSprites.forEach(s => { s.material.map?.dispose(); s.material.dispose(); scene.remove(s); });
-  instanceGroups=[]; allData=[]; labelSprites=[];
+  instanceGroups=[]; allData=[]; labelSprites=[]; pinnedInstance=null; selectedCard=null;
   flyOffset = 0;
 
   // ─── Group rows by (genre bucket, shapeIdx) ───
@@ -810,10 +812,16 @@ function updateFloat(t) {
         }
       }
 
-      const s = d.baseScale * scaleMul;
+      const isPinned = pinnedInstance && pinnedInstance.groupIdx === g.mesh.userData.groupIdx && pinnedInstance.instanceId === li;
+      const s = (isPinned ? d.baseScale * 1.6 : d.baseScale) * scaleMul;
       _floatDummy.position.set(px, py, pz);
       _floatDummy.scale.set(s, s, s);
-      _floatDummy.rotation.set(0, t * 0.15 + d.phase, 0);
+      if (isPinned) {
+        // Slow 360 spin on all axes for pinned artifact
+        _floatDummy.rotation.set(t * 0.4, t * 0.6, t * 0.2);
+      } else {
+        _floatDummy.rotation.set(0, t * 0.15 + d.phase, 0);
+      }
       _floatDummy.updateMatrix();
       g.mesh.setMatrixAt(li, _floatDummy.matrix);
       needsUpdate = true;
@@ -836,7 +844,15 @@ function fly(){
   if(keys.ArrowRight||keys.d){camera.position.addScaledVector(rt,sp);controls.target.addScaledVector(rt,sp)}
 }
 
-// ─── Click (Album Card) ───
+// ─── Click (Album Card + Pin) ───
+function unpinInstance() {
+  pinnedInstance = null;
+  selectedCard = null;
+  const card = document.getElementById('album-card');
+  card.style.display = 'none';
+  card.classList.remove('pinned');
+}
+
 function onClick(e) {
   // Ignore clicks on the card itself
   if (e.target.closest('#album-card')) return;
@@ -850,8 +866,17 @@ function onClick(e) {
   if (hits.length) {
     const h = hits[0], gi = h.object.userData.groupIdx;
     const entry = instanceGroups[gi]?.data[h.instanceId];
-    if (!entry) { card.style.display = 'none'; selectedCard = null; return; }
+    if (!entry) { unpinInstance(); return; }
+
+    // If clicking the same pinned artifact, unpin it
+    if (pinnedInstance && pinnedInstance.groupIdx === gi && pinnedInstance.instanceId === h.instanceId) {
+      unpinInstance();
+      return;
+    }
+
+    // Pin this artifact
     selectedCard = entry;
+    pinnedInstance = { groupIdx: gi, instanceId: h.instanceId, entry };
 
     const r = entry.row;
     card.querySelector('.ac-name').textContent = r[entry.nameCol] || '';
@@ -872,12 +897,15 @@ function onClick(e) {
     const song = r[entry.nameCol] || '';
     card.querySelector('.ac-yt').href = safeHref(buildYouTubeSearchUrl(song, artist));
 
+    card.classList.add('pinned');
     card.style.display = 'block';
-    card.style.left = Math.min(e.clientX + 14, innerWidth - 400) + 'px';
-    card.style.top = Math.min(e.clientY - 8, innerHeight - 180) + 'px';
+    // Position card at bottom-left of viewport
+    card.style.left = '20px';
+    card.style.bottom = '90px';
+    card.style.top = 'auto';
   } else {
-    card.style.display = 'none';
-    selectedCard = null;
+    // Click on empty space — unpin
+    unpinInstance();
   }
 }
 
@@ -893,8 +921,7 @@ function onCursorHint(e) {
 // ─── Close card ───
 document.getElementById('album-card').querySelector('.ac-close').addEventListener('click', (e) => {
   e.stopPropagation();
-  document.getElementById('album-card').style.display = 'none';
-  selectedCard = null;
+  unpinInstance();
 });
 
 // ─── Page Visibility ───
