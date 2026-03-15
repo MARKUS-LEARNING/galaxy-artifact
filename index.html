@@ -237,25 +237,40 @@ const MAX_GENRES = 15;
 const MAX_PTS = Infinity;
 
 // ─── Geometry Pool ───
-const NUM_SHAPES = 16;
 const GEOMETRIES = [
+  // Core primitives
   () => new THREE.SphereGeometry(0.35, 8, 6),
+  () => new THREE.BoxGeometry(0.45, 0.45, 0.45),
+  () => new THREE.ConeGeometry(0.3, 0.6, 6),
+  () => new THREE.CylinderGeometry(0.15, 0.3, 0.5, 6),
+  () => new THREE.CapsuleGeometry(0.15, 0.3, 4, 8),
+  () => new THREE.TorusGeometry(0.25, 0.1, 8, 16),
+  () => new THREE.TorusKnotGeometry(0.22, 0.08, 32, 8),
   () => new THREE.IcosahedronGeometry(0.35, 0),
   () => new THREE.OctahedronGeometry(0.35, 0),
   () => new THREE.DodecahedronGeometry(0.35, 0),
   () => new THREE.TetrahedronGeometry(0.4, 0),
-  () => new THREE.TorusKnotGeometry(0.22, 0.08, 32, 8),
-  () => new THREE.TorusGeometry(0.25, 0.1, 8, 16),
-  () => new THREE.BoxGeometry(0.45, 0.45, 0.45),
-  () => new THREE.ConeGeometry(0.3, 0.6, 6),
-  () => new THREE.CylinderGeometry(0.15, 0.3, 0.5, 6),
-  () => new THREE.SphereGeometry(0.25, 4, 3),
+  () => new THREE.CircleGeometry(0.35, 8),
+  () => new THREE.RingGeometry(0.15, 0.35, 8),
+  () => new THREE.PlaneGeometry(0.5, 0.5),
+  // Subdivision variants
   () => new THREE.IcosahedronGeometry(0.4, 1),
-  () => new THREE.TorusKnotGeometry(0.18, 0.06, 24, 6, 3, 2),
-  () => new THREE.CapsuleGeometry(0.15, 0.3, 4, 8),
   () => new THREE.OctahedronGeometry(0.45, 1),
+  () => new THREE.DodecahedronGeometry(0.3, 1),
+  () => new THREE.SphereGeometry(0.25, 4, 3),
+  // Knot & torus variants
+  () => new THREE.TorusKnotGeometry(0.18, 0.06, 24, 6, 3, 2),
+  () => new THREE.TorusKnotGeometry(0.2, 0.07, 28, 6, 2, 5),
   () => new THREE.TorusGeometry(0.3, 0.08, 6, 12),
+  // Custom polyhedron (diamond)
+  () => new THREE.PolyhedronGeometry([0,0.5,0, 0.4,0,0, 0,-0.5,0, -0.4,0,0, 0,0,0.4, 0,0,-0.4],[0,1,4, 1,2,4, 2,3,4, 3,0,4, 1,0,5, 2,1,5, 3,2,5, 0,3,5],0.35,0),
+  // Cone & cylinder variants
+  () => new THREE.ConeGeometry(0.35, 0.4, 3),
+  () => new THREE.CylinderGeometry(0.25, 0.25, 0.15, 6),
+  // Lathe (vase silhouette)
+  () => new THREE.LatheGeometry([new THREE.Vector2(0,0),new THREE.Vector2(0.25,0.1),new THREE.Vector2(0.3,0.25),new THREE.Vector2(0.15,0.45),new THREE.Vector2(0.2,0.5)], 8),
 ];
+const NUM_SHAPES = GEOMETRIES.length;
 
 const FLY_DEPTH = 200;
 
