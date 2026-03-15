@@ -163,13 +163,13 @@
   <div class="row" id="bg-row"></div>
   <hr>
   <label>Bloom</label>
-  <input type="range" id="r-bloom" min="0" max="2" step="0.05" value="0.4">
+  <input type="range" id="r-bloom" min="0" max="2" step="0.05" value="0.6">
   <label>Object Scale</label>
   <input type="range" id="r-scale" min="0.2" max="3" step="0.1" value="1">
   <label>Fly Speed</label>
   <input type="range" id="r-speed" min="0.001" max="8" step="0.001" value="0.8">
   <label>Fog</label>
-  <input type="range" id="r-fog" min="0" max="0.008" step="0.0002" value="0.0015">
+  <input type="range" id="r-fog" min="0" max="0.008" step="0.0002" value="0.001">
   <hr>
   <label>Toggles</label>
   <div class="row">
@@ -473,7 +473,7 @@ function findCol(hdrs, kws) {
 function initScene(){
   scene=new THREE.Scene();
   scene.background=new THREE.Color(0xffffff);
-  scene.fog=new THREE.FogExp2(0xffffff,0.0015);
+  scene.fog=new THREE.FogExp2(0xffffff,0.001);
   camera=new THREE.PerspectiveCamera(55,innerWidth/innerHeight,0.5,3000);
   renderer=new THREE.WebGLRenderer({antialias:true});
   renderer.setSize(innerWidth,innerHeight);
@@ -482,7 +482,7 @@ function initScene(){
   document.body.appendChild(renderer.domElement);
   composer=new EffectComposer(renderer);
   composer.addPass(new RenderPass(scene,camera));
-  bloomPass=new UnrealBloomPass(new THREE.Vector2(innerWidth,innerHeight),0.4,0.3,0.9);
+  bloomPass=new UnrealBloomPass(new THREE.Vector2(innerWidth,innerHeight),0.6,0.4,0.7);
   composer.addPass(bloomPass);
   controls=new OrbitControls(camera,renderer.domElement);
   controls.enableDamping=true;controls.dampingFactor=0.06;
@@ -586,9 +586,9 @@ function build(hdrs, rows){
     const color = new THREE.Color(colorMap[bucket] || OTHER);
     const isOther = bucket === '_other_';
     const mat = new THREE.MeshPhysicalMaterial({
-      color, metalness: 0.05, roughness: 0.4,
-      emissive: color, emissiveIntensity: isOther ? 0.03 : 0.15,
-      transparent: true, opacity: isOther ? 0.35 : 0.85,
+      color, metalness: 0.1, roughness: 0.3,
+      emissive: color, emissiveIntensity: isOther ? 0.08 : 0.35,
+      transparent: true, opacity: isOther ? 0.5 : 0.92,
     });
 
     const geom = GEOMETRIES[shapeIdx]();
@@ -643,7 +643,7 @@ function build(hdrs, rows){
         }
       }
 
-      const s = isOther ? 0.4 : 0.55 + Math.random() * 0.3;
+      const s = isOther ? 0.5 : 0.65 + Math.random() * 0.35;
       dummy.position.set(x, y, z);
       dummy.scale.set(s, s, s);
       dummy.rotation.set(Math.random()*3, Math.random()*3, Math.random()*3);
