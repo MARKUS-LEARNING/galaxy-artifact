@@ -163,7 +163,7 @@
   <div class="row" id="bg-row"></div>
   <hr>
   <label>Bloom</label>
-  <input type="range" id="r-bloom" min="0" max="2" step="0.05" value="0.6">
+  <input type="range" id="r-bloom" min="0" max="2" step="0.05" value="0.3">
   <label>Object Scale</label>
   <input type="range" id="r-scale" min="0.2" max="3" step="0.1" value="1">
   <label>Fly Speed</label>
@@ -217,9 +217,17 @@ const PALETTES = {
   warm:     ['#FF4500','#FF6347','#FF7F50','#FFA07A','#DB7093','#CD5C5C','#B22222','#DC143C','#FF1493','#C71585','#D2691E','#FF8C00','#DAA520','#B8860B','#8B4513'],
   cool:     ['#0077B6','#00B4D8','#48CAE4','#90E0EF','#023E8A','#0096C7','#5E60CE','#7400B8','#6930C3','#5390D9','#4EA8DE','#56CFE1','#64DFDF','#72EFDD','#80FFDB'],
   mono:     ['#111','#222','#333','#444','#555','#666','#777','#888','#999','#aaa','#bbb','#ccc','#ddd','#e5e5e5','#f0f0f0'],
+  sunset:   ['#FF5E5B','#D8A47F','#FFBA49','#EF476F','#FF8C42','#FFC15E','#CE4257','#E76F51','#F4A261','#E9C46A','#264653','#2A9D8F','#F77F00','#FCBF49','#D62828'],
+  ocean:    ['#03045E','#0077B6','#00B4D8','#90E0EF','#CAF0F8','#005F73','#0A9396','#94D2BD','#E9D8A6','#EE9B00','#001219','#006D77','#83C5BE','#FFDDD2','#E29578'],
+  forest:   ['#2D6A4F','#40916C','#52B788','#74C69D','#95D5B2','#1B4332','#344E41','#3A5A40','#588157','#A3B18A','#DAD7CD','#B7E4C7','#D8F3DC','#081C15','#004B23'],
+  vapor:    ['#FF71CE','#01CDFE','#05FFA1','#B967FF','#FFFB96','#FF00FF','#00FFFF','#FF6EC7','#7B68EE','#00FF7F','#FF1493','#00CED1','#DA70D6','#40E0D0','#FFD700'],
+  earth:    ['#8B4513','#A0522D','#D2691E','#CD853F','#DEB887','#BC8F8F','#F4A460','#DAA520','#B8860B','#D2B48C','#C4A882','#8F7B66','#6B4226','#A67B5B','#E8D4B8'],
+  candy:    ['#FF69B4','#FF1493','#FF6EB4','#FFB6C1','#FFC0CB','#DB7093','#C71585','#FF00FF','#BA55D3','#9370DB','#8A2BE2','#9400D3','#EE82EE','#DDA0DD','#FF77FF'],
 };
 const BACKGROUNDS = {
   white: '#ffffff', black: '#0a0a0a', midnight: '#0d1b2a', cream: '#f5f0e8', slate: '#1e293b',
+  charcoal: '#2b2b2b', navy: '#0a1628', plum: '#1a0a2e', forest: '#0a1a0a', ember: '#1a0800',
+  fog: '#c8c8c8', dusk: '#2d1b4e', steel: '#3a3f47', sand: '#d4c5a9', ice: '#e8f0f8',
 };
 let activePalette = 'neon';
 let activeBg = 'white';
@@ -482,7 +490,7 @@ function initScene(){
   document.body.appendChild(renderer.domElement);
   composer=new EffectComposer(renderer);
   composer.addPass(new RenderPass(scene,camera));
-  bloomPass=new UnrealBloomPass(new THREE.Vector2(innerWidth,innerHeight),0.6,0.4,0.7);
+  bloomPass=new UnrealBloomPass(new THREE.Vector2(innerWidth,innerHeight),0.3,0.4,0.85);
   composer.addPass(bloomPass);
   controls=new OrbitControls(camera,renderer.domElement);
   controls.enableDamping=true;controls.dampingFactor=0.06;
@@ -1141,7 +1149,8 @@ Object.entries(BACKGROUNDS).forEach(([name, hex]) => {
     const col = new THREE.Color(hex);
     scene.background = col;
     scene.fog.color = col;
-    const isDark = name !== 'white' && name !== 'cream';
+    const lightBgs = new Set(['white', 'cream', 'fog', 'sand', 'ice']);
+    const isDark = !lightBgs.has(name);
     document.getElementById('hud').style.color = isDark ? '#ddd' : '';
     document.getElementById('info').style.color = isDark ? '#999' : '';
     document.querySelector('#hud h1').style.color = isDark ? '#eee' : '#333';
