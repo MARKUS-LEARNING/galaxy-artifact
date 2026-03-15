@@ -135,7 +135,7 @@
   #search-bar input:focus { border-color: #999; background: rgba(255,255,255,0.97); }
   #search-results {
     position: fixed; top: 52px; left: 50%; transform: translateX(-50%);
-    z-index: 11; width: 380px; max-height: 340px; overflow-y: auto;
+    z-index: 11; width: 380px; max-height: 60vh; overflow-y: auto;
     background: rgba(255,255,255,0.97); backdrop-filter: blur(12px);
     border: 1px solid #eee; border-radius: 4px;
     box-shadow: 0 8px 32px rgba(0,0,0,0.12);
@@ -287,35 +287,54 @@
   /* Artifact Archive */
   #artifact-bag {
     position: relative;
+    background: rgba(255,255,255,0.95); backdrop-filter: blur(12px);
+    border: 1px solid #eee; border-radius: 6px;
+    width: 260px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+    overflow: hidden;
+    transition: box-shadow 0.3s ease;
   }
+  #artifact-bag:hover { box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
   #artifact-bag .ab-toggle {
-    font-family: inherit; font-size: 13px; letter-spacing: 3px;
-    text-transform: uppercase; color: #444; cursor: pointer;
-    background: none; border: none; padding: 0;
+    font-family: inherit; font-size: 12px; letter-spacing: 3px;
+    text-transform: uppercase; color: #333; cursor: pointer;
+    background: none; border: none; padding: 10px 14px;
     display: flex; align-items: center; gap: 8px;
+    width: 100%;
   }
   #artifact-bag .ab-toggle:hover { color: #e74c3c; }
   #artifact-bag .ab-icon {
-    font-size: 20px; transition: transform 0.3s ease, color 0.3s ease;
+    font-size: 18px; transition: transform 0.3s ease, color 0.3s ease;
   }
   #artifact-bag .ab-count {
-    background: #e74c3c; color: #fff; font-size: 10px;
-    padding: 2px 7px; border-radius: 8px; min-width: 20px;
+    background: #e74c3c; color: #fff; font-size: 9px;
+    padding: 1px 6px; border-radius: 8px; min-width: 18px;
     text-align: center; display: none;
   }
   #artifact-bag .ab-count.has-items { display: inline-block; }
-  #artifact-bag .ab-panel {
-    display: none; position: absolute; bottom: 34px; left: 0;
-    background: rgba(255,255,255,0.97); backdrop-filter: blur(12px);
-    border: 1px solid #eee; padding: 12px 14px;
-    width: 280px; max-height: 320px; overflow-y: auto;
-    box-shadow: 0 8px 32px rgba(0,0,0,0.12); border-radius: 4px;
+  #artifact-bag .ab-chevron {
+    margin-left: auto; font-size: 10px; color: #aaa;
+    transition: transform 0.3s ease;
   }
-  #artifact-bag .ab-panel.open { display: block; }
-  #artifact-bag .ab-header {
-    display: flex; justify-content: space-between; align-items: center;
-    margin-bottom: 8px; padding-bottom: 6px; border-bottom: 1px solid #f0f0f0;
-    font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: #555;
+  #artifact-bag.open .ab-chevron { transform: rotate(180deg); }
+  #artifact-bag .ab-body {
+    max-height: 0; overflow: hidden;
+    transition: max-height 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  #artifact-bag.open .ab-body {
+    max-height: 320px;
+  }
+  #artifact-bag .ab-body-inner {
+    padding: 0 14px 10px;
+    max-height: 300px; overflow-y: auto;
+  }
+  #artifact-bag .ab-body-inner::-webkit-scrollbar { width: 4px; }
+  #artifact-bag .ab-body-inner::-webkit-scrollbar-thumb {
+    background: #ddd; border-radius: 2px;
+  }
+  #artifact-bag .ab-footer {
+    display: flex; justify-content: flex-end; align-items: center;
+    padding: 6px 14px 8px; border-top: 1px solid #f0f0f0;
   }
   #artifact-bag .ab-export {
     font-family: inherit; font-size: 9px; letter-spacing: 1px;
@@ -325,15 +344,17 @@
   }
   #artifact-bag .ab-export:hover { background: #555; }
   #artifact-bag .ab-item {
-    display: flex; justify-content: space-between; align-items: center;
-    padding: 5px 0; border-bottom: 1px solid #f8f8f8;
-    font-size: 11px; letter-spacing: 1px; color: #333;
+    display: flex; align-items: center;
+    padding: 6px 0; border-bottom: 1px solid #f5f5f5;
+    font-size: 11px; letter-spacing: 0.5px; color: #333;
   }
+  #artifact-bag .ab-item:last-child { border-bottom: none; }
   #artifact-bag .ab-item-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  #artifact-bag .ab-item-artist { color: #888; font-size: 10px; margin-left: 6px; flex-shrink: 0; }
+  #artifact-bag .ab-item-artist { color: #999; font-size: 10px; margin-left: 6px; flex-shrink: 0; }
   #artifact-bag .ab-item-remove {
     background: none; border: none; color: #ccc; cursor: pointer;
-    font-size: 12px; padding: 0 2px; font-family: inherit; flex-shrink: 0;
+    font-size: 14px; padding: 0 0 0 8px; font-family: inherit; flex-shrink: 0;
+    line-height: 1;
   }
   #artifact-bag .ab-item-remove:hover { color: #e74c3c; }
   #artifact-bag .ab-empty {
@@ -378,14 +399,16 @@
       <span class="ab-icon">♡</span>
       <span class="ab-count" id="ab-count">0</span>
       <span class="ab-label">Artifact Archive</span>
+      <span class="ab-chevron">▼</span>
     </button>
-    <div class="ab-panel" id="ab-panel">
-      <div class="ab-header">
-        <span>Artifact Archive</span>
+    <div class="ab-body">
+      <div class="ab-body-inner">
+        <div class="ab-list" id="ab-list"></div>
+        <div class="ab-empty" id="ab-empty">Heart artifacts to build your archive</div>
+      </div>
+      <div class="ab-footer">
         <button class="ab-export" id="ab-export" title="Export collection">Export</button>
       </div>
-      <div class="ab-list" id="ab-list"></div>
-      <div class="ab-empty" id="ab-empty">Heart artifacts to build your archive</div>
     </div>
   </div>
   <div id="info"></div>
@@ -757,12 +780,15 @@ function updateBagUI() {
   const icon = document.querySelector('#artifact-bag .ab-icon');
   icon.textContent = artifactArchive.length > 0 ? '\u2665' : '\u2661';
 
+  const footerEl = document.querySelector('#artifact-bag .ab-footer');
   listEl.innerHTML = '';
   if (artifactArchive.length === 0) {
     emptyEl.style.display = '';
+    if (footerEl) footerEl.style.display = 'none';
     return;
   }
   emptyEl.style.display = 'none';
+  if (footerEl) footerEl.style.display = '';
 
   artifactArchive.forEach((a, i) => {
     const item = document.createElement('div');
@@ -1599,7 +1625,7 @@ document.getElementById('album-card').querySelector('.ac-heart').addEventListene
 
 // ─── Artifact Bag panel ───
 document.getElementById('ab-toggle').addEventListener('click', () => {
-  document.getElementById('ab-panel').classList.toggle('open');
+  document.getElementById('artifact-bag').classList.toggle('open');
 });
 
 document.getElementById('ab-list').addEventListener('click', (e) => {
@@ -2059,9 +2085,8 @@ function searchArtifacts(query) {
   }
   const q = query.toLowerCase();
   const matches = [];
-  const limit = 20;
 
-  for (let i = 0; i < masterData.length && matches.length < limit; i++) {
+  for (let i = 0; i < masterData.length; i++) {
     const row = masterData[i];
     let matched = false;
     let matchCol = '';
@@ -2112,10 +2137,7 @@ function searchArtifacts(query) {
     searchResults.appendChild(item);
   });
 
-  if (matches.length >= limit) {
-    searchResults.innerHTML += '<div class="sr-hint">Showing first ' + limit + ' results</div>';
-  }
-  searchResults.innerHTML += '<div class="sr-hint">AI-powered search coming soon</div>';
+  searchResults.innerHTML += '<div class="sr-hint">' + matches.length + ' result' + (matches.length !== 1 ? 's' : '') + '</div>';
   searchResults.classList.add('open');
 }
 
