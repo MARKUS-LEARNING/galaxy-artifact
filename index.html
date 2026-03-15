@@ -60,13 +60,17 @@
     font-size: 10px; letter-spacing: 2px; text-transform: uppercase;
     margin-bottom: 10px;
   }
-  #album-card .ac-yt {
+  #album-card .ac-links { display: flex; gap: 8px; flex-wrap: wrap; }
+  #album-card .ac-link {
     display: inline-block; padding: 6px 14px; border-radius: 3px;
     font-size: 10px; letter-spacing: 2px; text-transform: uppercase;
     background: #222; color: #fff; text-decoration: none;
     font-family: inherit; transition: background 0.15s;
   }
-  #album-card .ac-yt:hover { background: #cc0000; }
+  #album-card .ac-link:hover { background: #555; }
+  #album-card .ac-link.ac-yt:hover { background: #cc0000; }
+  #album-card .ac-link.ac-spotify:hover { background: #1db954; }
+  #album-card .ac-link.ac-apple:hover { background: #fa243c; }
   #album-card.pinned { border-left: 3px solid #555; }
 
   /* Customize panel */
@@ -186,7 +190,11 @@
   <div class="ac-sub"></div>
   <div class="ac-genre"></div>
   <br>
-  <a class="ac-yt" href="#" target="_blank" rel="noopener noreferrer">YouTube</a>
+  <div class="ac-links">
+    <a class="ac-link ac-yt" href="#" target="_blank" rel="noopener noreferrer">YouTube</a>
+    <a class="ac-link ac-spotify" href="#" target="_blank" rel="noopener noreferrer">Spotify</a>
+    <a class="ac-link ac-apple" href="#" target="_blank" rel="noopener noreferrer">Apple Music</a>
+  </div>
 </div>
 
 <div id="loading">/// Loading library... ///</div>
@@ -465,6 +473,14 @@ function isXML(text) {
 function buildYouTubeSearchUrl(song, artist) {
   const query = [artist, song].filter(Boolean).join(' ');
   return 'https://www.youtube.com/results?search_query=' + encodeURIComponent(query);
+}
+function buildSpotifySearchUrl(song, artist) {
+  const query = [artist, song].filter(Boolean).join(' ');
+  return 'https://open.spotify.com/search/' + encodeURIComponent(query);
+}
+function buildAppleMusicSearchUrl(song, artist) {
+  const query = [artist, song].filter(Boolean).join(' ');
+  return 'https://music.apple.com/us/search?term=' + encodeURIComponent(query);
 }
 
 function safeHref(url) {
@@ -933,10 +949,12 @@ function onClick(e) {
     ge.style.background = gc + '22';
     ge.style.color = gc;
 
-    // YouTube search link
+    // Search links
     const artist = (entry.artistCol && r[entry.artistCol]) || '';
     const song = r[entry.nameCol] || '';
     card.querySelector('.ac-yt').href = safeHref(buildYouTubeSearchUrl(song, artist));
+    card.querySelector('.ac-spotify').href = safeHref(buildSpotifySearchUrl(song, artist));
+    card.querySelector('.ac-apple').href = safeHref(buildAppleMusicSearchUrl(song, artist));
 
     card.classList.add('pinned');
     card.style.display = 'block';
