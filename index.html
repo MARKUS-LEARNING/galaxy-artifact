@@ -295,6 +295,7 @@ let autoFly = true;
 let layoutMode = 'layers'; // 'layers' | 'sphere'
 let selectedCard = null; // currently shown card entry
 let pinnedInstance = null; // { groupIdx, instanceId, entry, originPos, targetPos, pinTime, settled }
+let unpinning = null; // { groupIdx, instanceId, startPos, startScale, originPos, unpinTime, data }
 
 // ─── CSV Parser ───
 function csvSplitRows(t){const r=[];let c='',q=false;for(let i=0;i<t.length;i++){const ch=t[i];if(ch==='"'){q=!q;c+=ch}else if(ch==='\n'&&!q){r.push(c);c=''}else c+=ch}if(c.trim())r.push(c);return r}
@@ -602,7 +603,7 @@ function build(hdrs, rows){
     g.data = null;
   });
   labelSprites.forEach(s => { s.material.map?.dispose(); s.material.dispose(); scene.remove(s); });
-  instanceGroups=[]; allData=[]; labelSprites=[]; pinnedInstance=null; selectedCard=null;
+  instanceGroups=[]; allData=[]; labelSprites=[]; pinnedInstance=null; selectedCard=null; unpinning=null;
   flyOffset = 0;
 
   // ─── Group rows by (genre bucket, shapeIdx) ───
@@ -844,15 +845,28 @@ function updateFloat(t) {
       }
 
       const isPinned = pinnedInstance && pinnedInstance.groupIdx === g.mesh.userData.groupIdx && pinnedInstance.instanceId === li;
+      const isUnpinning = unpinning && unpinning.groupIdx === g.mesh.userData.groupIdx && unpinning.instanceId === li;
 
       if (isPinned) {
-        // Smooth swoop: lerp from origin to target over ~1.5 seconds
+        // Recompute target each frame so artifact stays centered in front of camera
+        const dir = new THREE.Vector3();
+        camera.getWorldDirection(dir);
+        const right = new THREE.Vector3().crossVectors(dir, camera.up).normalize();
+        const targetPos = camera.position.clone().add(dir.clone().multiplyScalar(12)).add(right.multiplyScalar(-2));
+
+        // Smooth swoop: lerp from origin to target over ~0.6 seconds
         const elapsed = t - pinnedInstance.pinTime;
-        const progress = Math.min(elapsed / 1.5, 1.0);
+        const progress = Math.min(elapsed / 0.6, 1.0);
         // Ease-out cubic for graceful deceleration
         const ease = 1 - Math.pow(1 - progress, 3);
 
-        const currentPos = new THREE.Vector3().lerpVectors(pinnedInstance.originPos, pinnedInstance.targetPos, ease);
+        let currentPos;
+        if (progress >= 1.0) {
+          // Settled — lock to camera-relative position
+          currentPos = targetPos;
+        } else {
+          currentPos = new THREE.Vector3().lerpVectors(pinnedInstance.originPos, targetPos, ease);
+        }
         const baseS = d.baseScale * scaleMul;
         const targetS = d.baseScale * 5.0 * scaleMul;
         const ps = baseS + (targetS - baseS) * ease;
@@ -865,6 +879,24 @@ function updateFloat(t) {
         // Store world position for card placement
         pinnedInstance.worldPos = currentPos;
         pinnedInstance.settled = progress >= 1.0;
+      } else if (isUnpinning) {
+        // Graceful return: lerp from pinned position back to natural position
+        const elapsed = t - unpinning.unpinTime;
+        const progress = Math.min(elapsed / 0.5, 1.0);
+        const ease = progress * progress * (3 - 2 * progress); // smoothstep
+
+        const naturalPos = new THREE.Vector3(px, py, pz);
+        const currentPos = new THREE.Vector3().lerpVectors(unpinning.startPos, naturalPos, ease);
+        const naturalS = d.baseScale * scaleMul;
+        const ps = unpinning.startScale + (naturalS - unpinning.startScale) * ease;
+
+        _floatDummy.position.copy(currentPos);
+        _floatDummy.scale.set(ps, ps, ps);
+        _floatDummy.rotation.set(t * 0.4 * (1 - ease), t * 0.6 * (1 - ease) + t * 0.15 * ease + d.phase * ease, t * 0.2 * (1 - ease));
+        _floatDummy.updateMatrix();
+        g.mesh.setMatrixAt(li, _floatDummy.matrix);
+
+        if (progress >= 1.0) unpinning = null;
       } else {
         const s = d.baseScale * scaleMul;
         _floatDummy.position.set(px, py, pz);
@@ -895,12 +927,31 @@ function fly(){
 
 // ─── Click (Album Card + Pin) ───
 function unpinInstance() {
+  if (pinnedInstance) {
+    // Capture current state for graceful return
+    const d = instanceGroups[pinnedInstance.groupIdx]?.data[pinnedInstance.instanceId];
+    if (d && pinnedInstance.worldPos) {
+      unpinning = {
+        groupIdx: pinnedInstance.groupIdx,
+        instanceId: pinnedInstance.instanceId,
+        startPos: pinnedInstance.worldPos.clone(),
+        startScale: d.baseScale * 5.0 * scaleMul,
+        unpinTime: clock.getElapsedTime(),
+      };
+    }
+  }
   pinnedInstance = null;
   selectedCard = null;
+  // Fade card out
   const card = document.getElementById('album-card');
-  card.style.display = 'none';
-  card.style.opacity = '';
-  card.classList.remove('pinned');
+  card.style.transition = 'opacity 0.35s ease';
+  card.style.opacity = '0';
+  setTimeout(() => {
+    card.style.display = 'none';
+    card.style.opacity = '';
+    card.style.transition = '';
+    card.classList.remove('pinned');
+  }, 350);
 }
 
 function onClick(e) {
@@ -924,16 +975,12 @@ function onClick(e) {
       return;
     }
 
-    // Pin this artifact — capture current position and compute center target
+    // Pin this artifact — capture current position; target is computed per-frame relative to camera
     selectedCard = entry;
     const originPos = h.point.clone();
-    const dir = new THREE.Vector3();
-    camera.getWorldDirection(dir);
-    const right = new THREE.Vector3().crossVectors(dir, camera.up).normalize();
-    // Place artifact slightly left of center so card fits to the right
-    const targetPos = camera.position.clone().add(dir.multiplyScalar(12)).add(right.multiplyScalar(-2));
     const pinTime = clock.getElapsedTime();
-    pinnedInstance = { groupIdx: gi, instanceId: h.instanceId, entry, originPos, targetPos, pinTime, settled: false };
+    unpinning = null; // cancel any in-progress return animation
+    pinnedInstance = { groupIdx: gi, instanceId: h.instanceId, entry, originPos, pinTime, settled: false };
 
     const r = entry.row;
     card.querySelector('.ac-name').textContent = r[entry.nameCol] || '';
@@ -1011,7 +1058,7 @@ function animate(){
     const card = document.getElementById('album-card');
     // Fade card in after swoop completes
     const elapsed = t - pinnedInstance.pinTime;
-    const cardFade = Math.min(Math.max((elapsed - 1.0) / 0.5, 0), 1);
+    const cardFade = Math.min(Math.max((elapsed - 0.3) / 0.3, 0), 1);
     card.style.opacity = cardFade;
     // Place card to the right of the artifact with healthy spacing
     card.style.left = Math.min(Math.max(sx + 80, 10), innerWidth - 400) + 'px';
