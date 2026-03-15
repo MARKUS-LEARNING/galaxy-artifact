@@ -163,7 +163,7 @@
   <div class="row" id="bg-row"></div>
   <hr>
   <label>Bloom</label>
-  <input type="range" id="r-bloom" min="0" max="2" step="0.05" value="0.35">
+  <input type="range" id="r-bloom" min="0" max="2" step="0.05" value="0.6">
   <label>Object Scale</label>
   <input type="range" id="r-scale" min="0.2" max="3" step="0.1" value="1">
   <label>Fly Speed</label>
@@ -490,14 +490,14 @@ function initScene(){
   document.body.appendChild(renderer.domElement);
   composer=new EffectComposer(renderer);
   composer.addPass(new RenderPass(scene,camera));
-  bloomPass=new UnrealBloomPass(new THREE.Vector2(innerWidth,innerHeight),0.35,0.4,0.85);
+  bloomPass=new UnrealBloomPass(new THREE.Vector2(innerWidth,innerHeight),0.6,0.5,0.7);
   composer.addPass(bloomPass);
   controls=new OrbitControls(camera,renderer.domElement);
   controls.enableDamping=true;controls.dampingFactor=0.06;
   controls.minDistance=3;controls.maxDistance=1500;
   controls.rotateSpeed=0.4;controls.zoomSpeed=0.6;controls.panSpeed=0.5;
   controls.autoRotateSpeed=0.3;
-  scene.add(new THREE.AmbientLight(0xffffff,0.8));
+  scene.add(new THREE.AmbientLight(0xffffff,1.0));
   const d=new THREE.DirectionalLight(0xffffff,0.6);d.position.set(50,80,50);scene.add(d);
   raycaster=new THREE.Raycaster();clock=new THREE.Clock();
   window.addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);composer.setSize(innerWidth,innerHeight)});
@@ -594,9 +594,9 @@ function build(hdrs, rows){
     const color = new THREE.Color(colorMap[bucket] || OTHER);
     const isOther = bucket === '_other_';
     const mat = new THREE.MeshPhysicalMaterial({
-      color, metalness: 0.1, roughness: 0.3,
-      emissive: color, emissiveIntensity: isOther ? 0.08 : 0.35,
-      transparent: true, opacity: isOther ? 0.5 : 0.92,
+      color, metalness: 0.15, roughness: 0.25,
+      emissive: color, emissiveIntensity: isOther ? 0.25 : 0.5,
+      transparent: true, opacity: isOther ? 0.75 : 0.95,
     });
 
     const geom = GEOMETRIES[shapeIdx]();
