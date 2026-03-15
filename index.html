@@ -21,6 +21,14 @@
   @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&display=swap');
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body { background: #fff; font-family: 'Space Mono', monospace; overflow: hidden; }
+
+  /* Elegant thin scrollbars */
+  * { scrollbar-width: thin; scrollbar-color: rgba(0,0,0,0.15) transparent; }
+  ::-webkit-scrollbar { width: 5px; height: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.15); border-radius: 4px; }
+  ::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,0.25); }
+
   canvas { display: block; }
 
   #hud {
@@ -328,10 +336,6 @@
     padding: 0 14px 6px;
     max-height: 280px; overflow-y: auto;
   }
-  #artifact-bag .ab-body-inner::-webkit-scrollbar { width: 4px; }
-  #artifact-bag .ab-body-inner::-webkit-scrollbar-thumb {
-    background: #ddd; border-radius: 2px;
-  }
   #artifact-bag .ab-footer {
     display: flex; justify-content: flex-end; align-items: center;
     padding: 6px 14px 8px; border-top: 1px solid #f0f0f0;
@@ -579,7 +583,7 @@ let showLabels = true;
 let scaleMul = 1.0;
 let flyOffset = 0;
 let autoFly = true;
-let layoutMode = 'layers'; // 'layers' | 'sphere'
+let layoutMode = 'layers'; // 'layers' | 'sphere' | 'helix' | 'grid' | 'spiral' | 'stream'
 let figure8Mode = false;
 let waveMode = false;
 let selectedCard = null; // currently shown card entry
@@ -1097,6 +1101,9 @@ function build(hdrs, rows){
   const Y_GAP = 8;       // vertical gap between genre rows
   const Z_SCATTER = FLY_DEPTH; // depth scatter (was 5)
   const SPHERE_RADIUS = 80;
+  const HELIX_RADIUS = 25;
+  const HELIX_PITCH = 0.6;
+  const SPIRAL_ARMS = Math.min(topGenres.length + 1, 6);
 
   // Genre row positions (top genres evenly spaced, Other at bottom)
   const genreY = {};
@@ -1156,47 +1163,76 @@ function build(hdrs, rows){
     items.forEach((item, li) => {
       let x, y, z;
 
+      // Year normalization helper
+      let yearNorm = item.idx / rows.length; // fallback
+      if (yearCol) {
+        const yr = parseInt(item.row[yearCol]);
+        if (yr > 1900 && yr <= 2030) yearNorm = (yr - minYear) / yearRange;
+      }
+      const bucketIdx = allBuckets.indexOf(bucket);
+      const bucketFrac = bucketIdx / (allBuckets.length - 1 || 1);
+
       if (layoutMode === 'sphere') {
-        // Latitude from genre band + jitter
         const latSpread = (160 / (allBuckets.length || 1)) * (Math.PI / 180);
         const lat = genreLat[bucket] + (Math.random() - 0.5) * latSpread;
-
-        // Longitude from year (0..2π) + jitter
-        let lon;
-        if (yearCol) {
-          const yr = parseInt(item.row[yearCol]);
-          lon = (yr > 1900 && yr <= 2030)
-            ? ((yr - minYear) / yearRange) * Math.PI * 2 + (Math.random() - 0.5) * 0.15
-            : Math.random() * Math.PI * 2;
-        } else {
-          lon = (item.idx / rows.length) * Math.PI * 2;
-        }
-
+        const lon = yearNorm * Math.PI * 2 + (Math.random() - 0.5) * 0.15;
         const r = SPHERE_RADIUS + (Math.random() - 0.5) * 10;
         x = r * Math.cos(lat) * Math.cos(lon);
         y = r * Math.sin(lat);
         z = r * Math.cos(lat) * Math.sin(lon);
+
+      } else if (layoutMode === 'helix') {
+        // DNA double helix — two intertwined strands
+        const strand = li % 2; // alternate items between strands
+        const theta = yearNorm * Math.PI * 12 + (Math.random() - 0.5) * 0.2;
+        const helixY = (yearNorm - 0.5) * 120;
+        const strandOffset = strand * Math.PI; // 180° apart
+        const rJitter = HELIX_RADIUS + (Math.random() - 0.5) * 4;
+        x = rJitter * Math.cos(theta + strandOffset);
+        z = rJitter * Math.sin(theta + strandOffset);
+        y = helixY + (Math.random() - 0.5) * 2;
+
+      } else if (layoutMode === 'grid') {
+        // Clean organized grid — rows by genre, columns by year
+        const cols = Math.max(Math.ceil(Math.sqrt(rows.length / allBuckets.length)), 4);
+        const colIdx = Math.floor(yearNorm * (cols - 1));
+        const gridSpacing = 3.5;
+        x = (colIdx - cols / 2) * gridSpacing + (Math.random() - 0.5) * 0.6;
+        y = (allBuckets.length / 2 - bucketIdx) * gridSpacing * 1.8;
+        z = (Math.random() - 0.5) * 2;
+
+      } else if (layoutMode === 'spiral') {
+        // Logarithmic spiral galaxy arms
+        const armIdx = bucketIdx % SPIRAL_ARMS;
+        const armAngle = (armIdx / SPIRAL_ARMS) * Math.PI * 2;
+        const dist = 10 + yearNorm * 70;
+        const spiralTightness = 2.5;
+        const theta = armAngle + Math.log(dist / 10 + 1) * spiralTightness;
+        const scatter = (1 - yearNorm * 0.5) * 6;
+        x = dist * Math.cos(theta) + (Math.random() - 0.5) * scatter;
+        z = dist * Math.sin(theta) + (Math.random() - 0.5) * scatter;
+        y = (Math.random() - 0.5) * (3 + yearNorm * 2);
+
+      } else if (layoutMode === 'stream') {
+        // Flowing river — genre streams that weave and converge
+        const streamX = (yearNorm - 0.5) * X_SPREAD;
+        const streamPhase = bucketFrac * Math.PI * 2;
+        const meander = Math.sin(yearNorm * Math.PI * 3 + streamPhase) * 12;
+        const streamY = (allBuckets.length / 2 - bucketIdx) * 5 + meander;
+        const depth = Math.sin(yearNorm * Math.PI * 5 + streamPhase * 0.7) * 8;
+        x = streamX + (Math.random() - 0.5) * 3;
+        y = streamY + (Math.random() - 0.5) * 2;
+        z = depth + (Math.random() - 0.5) * 4;
+
       } else {
-        // Layers: X = year position
-        x = 0;
+        // Layers (default)
+        x = (yearNorm - 0.5) * X_SPREAD;
         if (yearCol) {
           const yr = parseInt(item.row[yearCol]);
-          x = (yr > 1900 && yr <= 2030)
-            ? ((yr - minYear) / yearRange - 0.5) * X_SPREAD
-            : (Math.random() - 0.5) * 10 - X_SPREAD/2 - 10;
-        } else {
-          x = (item.idx / rows.length - 0.5) * X_SPREAD;
+          if (!(yr > 1900 && yr <= 2030)) x = (Math.random() - 0.5) * 10 - X_SPREAD/2 - 10;
         }
-
-        // Y = genre row + small jitter
         y = genreY[bucket] + (Math.random() - 0.5) * Y_GAP * 0.5;
-
-        // Z = wide depth scatter for fly-through
         z = (Math.random() - 0.5) * Z_SCATTER;
-        if (timeCol) {
-          const t = parseFloat(item.row[timeCol]);
-          if (!isNaN(t) && t > 0) z = (Math.random() - 0.5) * Z_SCATTER;
-        }
       }
 
       const s = isOther ? 0.5 : 0.65 + Math.random() * 0.35;
@@ -1229,18 +1265,14 @@ function build(hdrs, rows){
   // ─── Labels ───
   if (showLabels) {
     if (layoutMode === 'sphere') {
-      // Genre labels at sphere surface
       allBuckets.forEach(bucket => {
         if (bucket === '_other_') return;
         const lat = genreLat[bucket];
         const labelR = SPHERE_RADIUS + 15;
         const sprite = makeLabel(bucket, colorMap[bucket] || OTHER);
         sprite.position.set(labelR * Math.cos(lat), labelR * Math.sin(lat), 0);
-        scene.add(sprite);
-        labelSprites.push(sprite);
+        scene.add(sprite); labelSprites.push(sprite);
       });
-
-      // Year markers at equator
       const yearStep = yearRange > 30 ? 10 : 5;
       for (let yr = Math.ceil(minYear/yearStep)*yearStep; yr <= maxYear; yr += yearStep) {
         const lon = ((yr - minYear) / yearRange) * Math.PI * 2;
@@ -1248,38 +1280,83 @@ function build(hdrs, rows){
         const sprite = makeLabel(String(yr), '#bbb');
         sprite.position.set(labelR * Math.cos(lon), -2, labelR * Math.sin(lon));
         sprite.scale.set(8, 1.5, 1);
-        scene.add(sprite);
-        labelSprites.push(sprite);
+        scene.add(sprite); labelSprites.push(sprite);
       }
-    } else {
-      // Layers: genre labels along left edge
-      allBuckets.forEach(bucket => {
+
+    } else if (layoutMode === 'helix') {
+      // Year markers along the helix axis
+      const yearStep = yearRange > 30 ? 10 : 5;
+      for (let yr = Math.ceil(minYear/yearStep)*yearStep; yr <= maxYear; yr += yearStep) {
+        const yNorm = (yr - minYear) / yearRange;
+        const sprite = makeLabel(String(yr), '#bbb');
+        sprite.position.set(HELIX_RADIUS + 8, (yNorm - 0.5) * 120, 0);
+        sprite.scale.set(8, 1.5, 1);
+        scene.add(sprite); labelSprites.push(sprite);
+      }
+
+    } else if (layoutMode === 'grid') {
+      // Genre labels along left edge
+      const gridSpacing = 3.5;
+      const cols = Math.max(Math.ceil(Math.sqrt(rows.length / allBuckets.length)), 4);
+      allBuckets.forEach((bucket, i) => {
         if (bucket === '_other_') return;
-        const label = bucket;
-        const yPos = genreY[bucket];
-        const sprite = makeLabel(label, colorMap[bucket] || OTHER);
-        sprite.position.set(-X_SPREAD/2 - 14, yPos, 0);
-        scene.add(sprite);
-        labelSprites.push(sprite);
+        const sprite = makeLabel(bucket, colorMap[bucket] || OTHER);
+        sprite.position.set(-cols / 2 * gridSpacing - 10, (allBuckets.length / 2 - i) * gridSpacing * 1.8, 0);
+        scene.add(sprite); labelSprites.push(sprite);
       });
 
-      // Other label
+    } else if (layoutMode === 'spiral') {
+      // Arm labels at outer edge
+      allBuckets.forEach((bucket, i) => {
+        if (bucket === '_other_') return;
+        const armIdx = i % SPIRAL_ARMS;
+        const armAngle = (armIdx / SPIRAL_ARMS) * Math.PI * 2;
+        const dist = 85;
+        const theta = armAngle + Math.log(dist / 10 + 1) * 2.5;
+        const sprite = makeLabel(bucket, colorMap[bucket] || OTHER);
+        sprite.position.set(dist * Math.cos(theta), 5, dist * Math.sin(theta));
+        scene.add(sprite); labelSprites.push(sprite);
+      });
+
+    } else if (layoutMode === 'stream') {
+      // Genre labels at the start of each stream
+      allBuckets.forEach((bucket, i) => {
+        if (bucket === '_other_') return;
+        const streamPhase = (i / (allBuckets.length - 1 || 1)) * Math.PI * 2;
+        const meander = Math.sin(streamPhase) * 12;
+        const sprite = makeLabel(bucket, colorMap[bucket] || OTHER);
+        sprite.position.set(-X_SPREAD / 2 - 14, (allBuckets.length / 2 - i) * 5 + meander, 0);
+        scene.add(sprite); labelSprites.push(sprite);
+      });
+      const yearStep = yearRange > 30 ? 10 : 5;
+      for (let yr = Math.ceil(minYear/yearStep)*yearStep; yr <= maxYear; yr += yearStep) {
+        const xPos = ((yr - minYear) / yearRange - 0.5) * X_SPREAD;
+        const sprite = makeLabel(String(yr), '#bbb');
+        sprite.position.set(xPos, -allBuckets.length * 2.5 - 8, 0);
+        sprite.scale.set(8, 1.5, 1);
+        scene.add(sprite); labelSprites.push(sprite);
+      }
+
+    } else {
+      // Layers (default)
+      allBuckets.forEach(bucket => {
+        if (bucket === '_other_') return;
+        const sprite = makeLabel(bucket, colorMap[bucket] || OTHER);
+        sprite.position.set(-X_SPREAD/2 - 14, genreY[bucket], 0);
+        scene.add(sprite); labelSprites.push(sprite);
+      });
       if (groups[Object.keys(groups).find(k => k.startsWith('_other_'))]) {
         const sprite = makeLabel(`Other (${sortedGenres.length - MAX_GENRES} genres)`, OTHER);
         sprite.position.set(-X_SPREAD/2 - 14, genreY['_other_'], 0);
-        scene.add(sprite);
-        labelSprites.push(sprite);
+        scene.add(sprite); labelSprites.push(sprite);
       }
-
-      // Year markers along the bottom
       const yearStep = yearRange > 30 ? 10 : 5;
       for (let y = Math.ceil(minYear/yearStep)*yearStep; y <= maxYear; y += yearStep) {
-        const x = ((y - minYear) / yearRange - 0.5) * X_SPREAD;
+        const xPos = ((y - minYear) / yearRange - 0.5) * X_SPREAD;
         const sprite = makeLabel(String(y), '#bbb');
-        sprite.position.set(x, genreY['_other_'] - Y_GAP, 0);
+        sprite.position.set(xPos, genreY['_other_'] - Y_GAP, 0);
         sprite.scale.set(8, 1.5, 1);
-        scene.add(sprite);
-        labelSprites.push(sprite);
+        scene.add(sprite); labelSprites.push(sprite);
       }
     }
   }
@@ -1288,6 +1365,18 @@ function build(hdrs, rows){
   if (layoutMode === 'sphere') {
     controls.target.set(0, 0, 0);
     camera.position.set(0, SPHERE_RADIUS * 0.5, SPHERE_RADIUS * 2.2);
+  } else if (layoutMode === 'helix') {
+    controls.target.set(0, 0, 0);
+    camera.position.set(60, 20, 60);
+  } else if (layoutMode === 'grid') {
+    controls.target.copy(centroid);
+    camera.position.set(centroid.x, centroid.y + 30, centroid.z + 60);
+  } else if (layoutMode === 'spiral') {
+    controls.target.set(0, 0, 0);
+    camera.position.set(0, 90, 90);
+  } else if (layoutMode === 'stream') {
+    controls.target.copy(centroid);
+    camera.position.set(centroid.x, centroid.y + 20, centroid.z + X_SPREAD * 0.4);
   } else {
     controls.target.copy(centroid);
     camera.position.set(centroid.x, centroid.y + 10, centroid.z + X_SPREAD * 0.5);
@@ -1333,7 +1422,8 @@ function makeLabel(text, color){
 const _floatDummy = new THREE.Object3D();
 function updateFloat(t) {
   const isSphere = layoutMode === 'sphere';
-  const spinAngle = isSphere && autoFly && !figure8Mode ? flyOffset * 0.3 : 0;
+  const isRadial = isSphere || layoutMode === 'helix' || layoutMode === 'spiral';
+  const spinAngle = isRadial && autoFly && !figure8Mode ? flyOffset * 0.3 : 0;
   const cosS = Math.cos(spinAngle), sinS = Math.sin(spinAngle);
 
   instanceGroups.forEach(g => {
@@ -1341,7 +1431,7 @@ function updateFloat(t) {
     g.data.forEach((d, li) => {
       let px, py, pz;
 
-      if (isSphere) {
+      if (isRadial) {
         const bx = d.basePos.x, bz = d.basePos.z;
         const rx = bx * cosS - bz * sinS;
         const rz = bx * sinS + bz * cosS;
@@ -1356,11 +1446,12 @@ function updateFloat(t) {
         if (waveMode) {
           px = d.basePos.x; py = d.basePos.y; pz = d.basePos.z;
         } else {
-          px = d.basePos.x + Math.sin(t * d.freq + d.phase) * d.amp;
-          py = d.basePos.y + Math.cos(t * d.freq * 0.7 + d.phase + 1.0) * d.amp * 0.6;
+          const floatScale = layoutMode === 'grid' ? 0.15 : 1;
+          px = d.basePos.x + Math.sin(t * d.freq + d.phase) * d.amp * floatScale;
+          py = d.basePos.y + Math.cos(t * d.freq * 0.7 + d.phase + 1.0) * d.amp * 0.6 * floatScale;
           pz = d.basePos.z;
         }
-        if (autoFly) {
+        if (autoFly && layoutMode !== 'grid') {
           pz = ((d.basePos.z + flyOffset) % FLY_DEPTH + FLY_DEPTH) % FLY_DEPTH - FLY_DEPTH / 2;
         }
       }
@@ -1731,8 +1822,9 @@ function animate(){
     card.style.bottom = 'auto';
   }
 
-  // Rotate labels with sphere
-  if (layoutMode === 'sphere' && autoFly && !figure8Mode) {
+  // Rotate labels with radial layouts
+  const isRadialLayout = layoutMode === 'sphere' || layoutMode === 'helix' || layoutMode === 'spiral';
+  if (isRadialLayout && autoFly && !figure8Mode) {
     const spin = flyOffset * 0.3;
     const cs = Math.cos(spin), ss = Math.sin(spin);
     labelSprites.forEach(s => {
@@ -1955,7 +2047,7 @@ document.getElementById('ctrl-toggle').addEventListener('click', () => {
 
 // Layout chips
 const layoutRow = document.getElementById('layout-row');
-['layers', 'sphere'].forEach(mode => {
+['layers', 'sphere', 'helix', 'spiral', 'grid', 'stream'].forEach(mode => {
   const btn = document.createElement('button');
   btn.className = 'chip' + (mode === layoutMode ? ' on' : '');
   btn.textContent = mode;
