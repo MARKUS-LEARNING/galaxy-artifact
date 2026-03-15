@@ -30,9 +30,9 @@
   #hud .sub { font-size: 8px; letter-spacing: 2px; color: #666; margin-top: 2px; }
 
   #info {
-    position: fixed; bottom: 46px; left: 20px; z-index: 10;
-    font-size: 8px; letter-spacing: 2px; color: #555;
-    line-height: 2; pointer-events: none;
+    position: fixed; bottom: 52px; left: 20px; z-index: 10;
+    font-size: 13px; letter-spacing: 1.5px; color: #444;
+    line-height: 1.9; pointer-events: none;
   }
 
   /* Album Card (replaces tooltip) */
@@ -152,8 +152,8 @@
     position: fixed; bottom: 20px; left: 20px; z-index: 10;
   }
   #upload-bar .ub-link {
-    font-family: inherit; font-size: 8px; letter-spacing: 2px;
-    text-transform: uppercase; color: #777; cursor: pointer;
+    font-family: inherit; font-size: 13px; letter-spacing: 2px;
+    text-transform: uppercase; color: #555; cursor: pointer;
     background: none; border: none; padding: 0;
     text-decoration: underline; text-underline-offset: 3px;
   }
@@ -172,28 +172,28 @@
     border-radius: 1px; transition: width 0.15s;
   }
 
-  /* Artifact Bag / Soul */
+  /* Artifact Archive */
   #artifact-bag {
-    position: fixed; bottom: 90px; left: 20px; z-index: 15;
+    position: fixed; bottom: 110px; left: 20px; z-index: 15;
   }
   #artifact-bag .ab-toggle {
-    font-family: inherit; font-size: 8px; letter-spacing: 2px;
-    text-transform: uppercase; color: #777; cursor: pointer;
+    font-family: inherit; font-size: 13px; letter-spacing: 3px;
+    text-transform: uppercase; color: #444; cursor: pointer;
     background: none; border: none; padding: 0;
-    display: flex; align-items: center; gap: 6px;
+    display: flex; align-items: center; gap: 8px;
   }
   #artifact-bag .ab-toggle:hover { color: #e74c3c; }
   #artifact-bag .ab-icon {
-    font-size: 14px; transition: transform 0.3s ease, color 0.3s ease;
+    font-size: 20px; transition: transform 0.3s ease, color 0.3s ease;
   }
   #artifact-bag .ab-count {
-    background: #e74c3c; color: #fff; font-size: 7px;
-    padding: 1px 5px; border-radius: 8px; min-width: 16px;
+    background: #e74c3c; color: #fff; font-size: 10px;
+    padding: 2px 7px; border-radius: 8px; min-width: 20px;
     text-align: center; display: none;
   }
   #artifact-bag .ab-count.has-items { display: inline-block; }
   #artifact-bag .ab-panel {
-    display: none; position: absolute; bottom: 28px; left: 0;
+    display: none; position: absolute; bottom: 34px; left: 0;
     background: rgba(255,255,255,0.97); backdrop-filter: blur(12px);
     border: 1px solid #eee; padding: 12px 14px;
     width: 280px; max-height: 320px; overflow-y: auto;
@@ -203,29 +203,29 @@
   #artifact-bag .ab-header {
     display: flex; justify-content: space-between; align-items: center;
     margin-bottom: 8px; padding-bottom: 6px; border-bottom: 1px solid #f0f0f0;
-    font-size: 8px; letter-spacing: 2px; text-transform: uppercase; color: #555;
+    font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: #555;
   }
   #artifact-bag .ab-export {
-    font-family: inherit; font-size: 7px; letter-spacing: 1px;
-    text-transform: uppercase; padding: 3px 8px;
+    font-family: inherit; font-size: 9px; letter-spacing: 1px;
+    text-transform: uppercase; padding: 4px 10px;
     background: #222; color: #fff; border: none; cursor: pointer;
     border-radius: 2px;
   }
   #artifact-bag .ab-export:hover { background: #555; }
   #artifact-bag .ab-item {
     display: flex; justify-content: space-between; align-items: center;
-    padding: 4px 0; border-bottom: 1px solid #f8f8f8;
-    font-size: 9px; letter-spacing: 1px; color: #333;
+    padding: 5px 0; border-bottom: 1px solid #f8f8f8;
+    font-size: 11px; letter-spacing: 1px; color: #333;
   }
   #artifact-bag .ab-item-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  #artifact-bag .ab-item-artist { color: #888; font-size: 8px; margin-left: 6px; flex-shrink: 0; }
+  #artifact-bag .ab-item-artist { color: #888; font-size: 10px; margin-left: 6px; flex-shrink: 0; }
   #artifact-bag .ab-item-remove {
     background: none; border: none; color: #ccc; cursor: pointer;
     font-size: 12px; padding: 0 2px; font-family: inherit; flex-shrink: 0;
   }
   #artifact-bag .ab-item-remove:hover { color: #e74c3c; }
   #artifact-bag .ab-empty {
-    font-size: 8px; color: #bbb; letter-spacing: 1px;
+    font-size: 10px; color: #bbb; letter-spacing: 1px;
     text-align: center; padding: 16px 0;
   }
 
@@ -290,7 +290,7 @@
 </div>
 
 <div id="album-card">
-  <button class="ac-heart" title="Add to Artifact Soul">
+  <button class="ac-heart" title="Add to Artifact Archive">
     <svg class="heart-svg" viewBox="0 0 24 24" width="20" height="20">
       <path class="heart-path" d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
     </svg>
@@ -313,15 +313,15 @@
   <button class="ab-toggle" id="ab-toggle">
     <span class="ab-icon">♡</span>
     <span class="ab-count" id="ab-count">0</span>
-    <span class="ab-label">Artifact Soul</span>
+    <span class="ab-label">Artifact Archive</span>
   </button>
   <div class="ab-panel" id="ab-panel">
     <div class="ab-header">
-      <span>Artifact Soul</span>
+      <span>Artifact Archive</span>
       <button class="ab-export" id="ab-export" title="Export collection">Export</button>
     </div>
     <div class="ab-list" id="ab-list"></div>
-    <div class="ab-empty" id="ab-empty">Heart artifacts to build your soul</div>
+    <div class="ab-empty" id="ab-empty">Heart artifacts to build your archive</div>
   </div>
 </div>
 
@@ -421,8 +421,8 @@ let autoFly = true;
 let layoutMode = 'layers'; // 'layers' | 'sphere'
 let selectedCard = null; // currently shown card entry
 
-// ─── Artifact Soul (hearted collection) ───
-let artifactSoul = JSON.parse(localStorage.getItem('artifactSoul') || '[]');
+// ─── Artifact Archive (hearted collection) ───
+let artifactArchive = JSON.parse(localStorage.getItem('artifactArchive') || '[]');
 
 function getArtifactKey(entry) {
   const r = entry.row;
@@ -434,11 +434,11 @@ function getArtifactKey(entry) {
 
 function isHearted(entry) {
   const key = getArtifactKey(entry);
-  return artifactSoul.some(a => a.key === key);
+  return artifactArchive.some(a => a.key === key);
 }
 
-function saveArtifactSoul() {
-  localStorage.setItem('artifactSoul', JSON.stringify(artifactSoul));
+function saveArtifactArchive() {
+  localStorage.setItem('artifactArchive', JSON.stringify(artifactArchive));
   updateBagUI();
 }
 
@@ -486,20 +486,20 @@ function updateBagUI() {
   const listEl = document.getElementById('ab-list');
   const emptyEl = document.getElementById('ab-empty');
 
-  countEl.textContent = artifactSoul.length;
-  countEl.classList.toggle('has-items', artifactSoul.length > 0);
+  countEl.textContent = artifactArchive.length;
+  countEl.classList.toggle('has-items', artifactArchive.length > 0);
 
   const icon = document.querySelector('#artifact-bag .ab-icon');
-  icon.textContent = artifactSoul.length > 0 ? '\u2665' : '\u2661';
+  icon.textContent = artifactArchive.length > 0 ? '\u2665' : '\u2661';
 
   listEl.innerHTML = '';
-  if (artifactSoul.length === 0) {
+  if (artifactArchive.length === 0) {
     emptyEl.style.display = '';
     return;
   }
   emptyEl.style.display = 'none';
 
-  artifactSoul.forEach((a, i) => {
+  artifactArchive.forEach((a, i) => {
     const item = document.createElement('div');
     item.className = 'ab-item';
     item.innerHTML =
@@ -1257,7 +1257,7 @@ document.getElementById('album-card').querySelector('.ac-heart').addEventListene
   const r = entry.row;
 
   if (isHearted(entry)) {
-    artifactSoul = artifactSoul.filter(a => a.key !== key);
+    artifactArchive = artifactArchive.filter(a => a.key !== key);
     heartBtn.classList.remove('hearted');
   } else {
     const artifact = {
@@ -1269,7 +1269,7 @@ document.getElementById('album-card').querySelector('.ac-heart').addEventListene
       year: (entry.yearCol && r[entry.yearCol]) || '',
       heartedAt: new Date().toISOString(),
     };
-    artifactSoul.push(artifact);
+    artifactArchive.push(artifact);
     heartBtn.classList.add('hearted');
 
     // Jump animation
@@ -1282,7 +1282,7 @@ document.getElementById('album-card').querySelector('.ac-heart').addEventListene
     createSwoopAnimation(artifact.name, nameRect);
   }
 
-  saveArtifactSoul();
+  saveArtifactArchive();
 });
 
 // ─── Artifact Bag panel ───
@@ -1294,20 +1294,20 @@ document.getElementById('ab-list').addEventListener('click', (e) => {
   const btn = e.target.closest('.ab-item-remove');
   if (!btn) return;
   const idx = parseInt(btn.dataset.idx);
-  artifactSoul.splice(idx, 1);
-  saveArtifactSoul();
+  artifactArchive.splice(idx, 1);
+  saveArtifactArchive();
   if (selectedCard && !isHearted(selectedCard)) {
     document.querySelector('.ac-heart')?.classList.remove('hearted');
   }
 });
 
 document.getElementById('ab-export').addEventListener('click', () => {
-  if (!artifactSoul.length) return;
+  if (!artifactArchive.length) return;
   const exportData = {
-    format: 'artifact-soul-v1',
+    format: 'artifact-archive-v1',
     exportedAt: new Date().toISOString(),
-    count: artifactSoul.length,
-    artifacts: artifactSoul.map(a => ({
+    count: artifactArchive.length,
+    artifacts: artifactArchive.map(a => ({
       name: a.name, artist: a.artist, album: a.album,
       genre: a.genre, year: a.year, heartedAt: a.heartedAt,
     }))
@@ -1316,7 +1316,7 @@ document.getElementById('ab-export').addEventListener('click', () => {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = 'artifact-soul-' + new Date().toISOString().slice(0, 10) + '.json';
+  a.download = 'artifact-archive-' + new Date().toISOString().slice(0, 10) + '.json';
   a.click();
   URL.revokeObjectURL(url);
 });
@@ -1597,7 +1597,7 @@ Object.entries(BACKGROUNDS).forEach(([name, hex]) => {
     document.getElementById('info').style.color = isDark ? '#999' : '';
     document.querySelector('#hud h1').style.color = isDark ? '#eee' : '#333';
     document.querySelector('#hud .sub').style.color = isDark ? '#aaa' : '#666';
-    document.querySelector('#artifact-bag .ab-toggle').style.color = isDark ? '#aaa' : '#777';
+    document.querySelector('#artifact-bag .ab-toggle').style.color = isDark ? '#aaa' : '#444';
   });
   bgRow.appendChild(btn);
 });
