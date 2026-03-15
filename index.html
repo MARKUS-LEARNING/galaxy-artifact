@@ -228,7 +228,7 @@ const MAX_GENRES = 15;
 const MAX_PTS = Infinity;
 
 // ─── Geometry Pool ───
-const NUM_SHAPES = 8;
+const NUM_SHAPES = 16;
 const GEOMETRIES = [
   () => new THREE.SphereGeometry(0.35, 8, 6),
   () => new THREE.IcosahedronGeometry(0.35, 0),
@@ -238,6 +238,14 @@ const GEOMETRIES = [
   () => new THREE.TorusKnotGeometry(0.22, 0.08, 32, 8),
   () => new THREE.TorusGeometry(0.25, 0.1, 8, 16),
   () => new THREE.BoxGeometry(0.45, 0.45, 0.45),
+  () => new THREE.ConeGeometry(0.3, 0.6, 6),
+  () => new THREE.CylinderGeometry(0.15, 0.3, 0.5, 6),
+  () => new THREE.SphereGeometry(0.25, 4, 3),
+  () => new THREE.IcosahedronGeometry(0.4, 1),
+  () => new THREE.TorusKnotGeometry(0.18, 0.06, 24, 6, 3, 2),
+  () => new THREE.CapsuleGeometry(0.15, 0.3, 4, 8),
+  () => new THREE.OctahedronGeometry(0.45, 1),
+  () => new THREE.TorusGeometry(0.3, 0.08, 6, 12),
 ];
 
 const FLY_DEPTH = 200;
