@@ -563,6 +563,7 @@ let activeFilters = {};
 let activeSortCol = null;
 let activeSortDir = 'asc';
 let _filterDebounce = null;
+let searchQuery = '';
 
 function applyFilters(rows) {
   const cols = Object.keys(activeFilters);
@@ -1884,6 +1885,13 @@ async function loadDefaultLibrary() {
 function rebuildViz() {
   if (!headers.length || !masterData.length) return;
   let filtered = applyFilters(masterData);
+  // Apply search query filter
+  if (searchQuery && searchQuery.length >= 2) {
+    const q = searchQuery.toLowerCase();
+    filtered = filtered.filter(row =>
+      headers.some(col => (row[col] || '').toString().toLowerCase().includes(q))
+    );
+  }
   filtered = applySort(filtered);
   csvData = filtered;
   if (filtered.length === 0) {
@@ -2081,7 +2089,10 @@ function searchArtifacts(query) {
     item.addEventListener('click', () => {
       searchResults.classList.remove('open');
       searchInput.value = '';
-      pinArtifactByRow(m.row);
+      searchQuery = '';
+      rebuildViz();
+      // Pin after rebuild so the artifact exists in the scene
+      setTimeout(() => pinArtifactByRow(m.row), 50);
     });
 
     searchResults.appendChild(item);
@@ -2143,7 +2154,12 @@ function pinArtifactByRow(targetRow) {
 
 searchInput.addEventListener('input', () => {
   clearTimeout(_searchDebounce);
-  _searchDebounce = setTimeout(() => searchArtifacts(searchInput.value.trim()), 200);
+  _searchDebounce = setTimeout(() => {
+    const q = searchInput.value.trim();
+    searchArtifacts(q);
+    searchQuery = q;
+    rebuildViz();
+  }, 200);
 });
 
 searchInput.addEventListener('focus', () => {
