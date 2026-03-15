@@ -36,7 +36,7 @@
   }
   #bottom-left > * { pointer-events: auto; }
   #info {
-    font-size: 13px; letter-spacing: 1.5px; color: #444;
+    font-size: 10px; letter-spacing: 2px; color: #666;
     line-height: 1.9; pointer-events: none;
   }
 
@@ -311,6 +311,8 @@
     <button class="chip on" id="t-labels">Labels</button>
     <button class="chip" id="t-orbit">Orbit</button>
     <button class="chip on" id="t-autofly">Auto-Fly</button>
+    <button class="chip" id="t-figure8">Figure-8</button>
+    <button class="chip" id="t-wave">Wave</button>
   </div>
 </div>
 
@@ -421,6 +423,8 @@ let scaleMul = 1.0;
 let flyOffset = 0;
 let autoFly = true;
 let layoutMode = 'layers'; // 'layers' | 'sphere'
+let figure8Mode = false;
+let waveMode = false;
 let selectedCard = null; // currently shown card entry
 
 // ─── Artifact Archive (hearted collection) ───
@@ -1045,20 +1049,51 @@ function updateFloat(t) {
       let px, py, pz;
 
       if (isSphere) {
-        // Gentle bob + globe rotation around Y axis
         const bx = d.basePos.x, bz = d.basePos.z;
         const rx = bx * cosS - bz * sinS;
         const rz = bx * sinS + bz * cosS;
-        px = rx + Math.sin(t * d.freq + d.phase) * d.amp * 0.3;
-        py = d.basePos.y + Math.cos(t * d.freq * 0.7 + d.phase + 1.0) * d.amp * 0.3;
-        pz = rz;
+        if (waveMode) {
+          px = rx; py = d.basePos.y; pz = rz;
+        } else {
+          px = rx + Math.sin(t * d.freq + d.phase) * d.amp * 0.3;
+          py = d.basePos.y + Math.cos(t * d.freq * 0.7 + d.phase + 1.0) * d.amp * 0.3;
+          pz = rz;
+        }
       } else {
-        px = d.basePos.x + Math.sin(t * d.freq + d.phase) * d.amp;
-        py = d.basePos.y + Math.cos(t * d.freq * 0.7 + d.phase + 1.0) * d.amp * 0.6;
-        pz = d.basePos.z;
+        if (waveMode) {
+          px = d.basePos.x; py = d.basePos.y; pz = d.basePos.z;
+        } else {
+          px = d.basePos.x + Math.sin(t * d.freq + d.phase) * d.amp;
+          py = d.basePos.y + Math.cos(t * d.freq * 0.7 + d.phase + 1.0) * d.amp * 0.6;
+          pz = d.basePos.z;
+        }
         if (autoFly) {
           pz = ((d.basePos.z + flyOffset) % FLY_DEPTH + FLY_DEPTH) % FLY_DEPTH - FLY_DEPTH / 2;
         }
+      }
+
+      // Wave physics displacement
+      if (waveMode) {
+        const omega = Math.min(flySpeed * 2.0, 6.0);
+        const waveK = 0.08;
+        const dist = Math.sqrt(d.basePos.x * d.basePos.x + d.basePos.z * d.basePos.z);
+        // Standing wave along X
+        const standing = Math.sin(waveK * d.basePos.x - omega * t)
+                       + Math.sin(waveK * d.basePos.x + omega * t);
+        // Radial ripple from center
+        const ripple = Math.sin(waveK * dist - omega * t + d.phase);
+        // Transverse displacement (Y)
+        const waveAmp = d.amp * flySpeed * 1.5;
+        py += (standing * 0.4 + ripple * 0.6) * waveAmp;
+        // Longitudinal displacement (X/Z)
+        const longAmp = waveAmp * 0.2;
+        const normX = dist > 0.01 ? d.basePos.x / dist : 0;
+        const normZ = dist > 0.01 ? d.basePos.z / dist : 0;
+        const longWave = Math.cos(waveK * dist - omega * t + d.phase);
+        px += normX * longWave * longAmp;
+        pz += normZ * longWave * longAmp;
+        // Second harmonic interference
+        py += Math.sin(waveK * 2 * dist - omega * 1.5 * t + d.phase * 2) * waveAmp * 0.25;
       }
 
       const isPinned = pinnedInstance && pinnedInstance.groupIdx === g.mesh.userData.groupIdx && pinnedInstance.instanceId === li;
@@ -1118,7 +1153,12 @@ function updateFloat(t) {
         const s = d.baseScale * scaleMul;
         _floatDummy.position.set(px, py, pz);
         _floatDummy.scale.set(s, s, s);
-        _floatDummy.rotation.set(0, t * 0.15 + d.phase, 0);
+        if (waveMode) {
+          const wRot = Math.sin(t * flySpeed + d.phase) * 0.5;
+          _floatDummy.rotation.set(wRot, t * 0.15 + d.phase, wRot * 0.3);
+        } else {
+          _floatDummy.rotation.set(0, t * 0.15 + d.phase, 0);
+        }
         _floatDummy.updateMatrix();
         g.mesh.setMatrixAt(li, _floatDummy.matrix);
       }
@@ -1133,6 +1173,7 @@ const keys={};
 function onKey(e){if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','w','a','s','d'].includes(e.key)){e.preventDefault();keys[e.key]=true}}
 function onKeyUp(e){keys[e.key]=false}
 function fly(){
+  if (figure8Mode && autoFly) return;
   const sp=flySpeed;
   const fwd=new THREE.Vector3();camera.getWorldDirection(fwd);fwd.y=0;fwd.normalize();
   const rt=new THREE.Vector3().crossVectors(fwd,camera.up).normalize();
@@ -1347,6 +1388,29 @@ function animate(){
   }
 
   fly();
+
+  // Figure-8 camera path (lemniscate of Bernoulli)
+  if (figure8Mode && autoFly) {
+    const theta = flyOffset * 0.15;
+    const sinT = Math.sin(theta), cosT = Math.cos(theta);
+    const denom = 1 + sinT * sinT;
+    const radius = layoutMode === 'sphere' ? 120 : 80;
+    const depth = layoutMode === 'sphere' ? 120 : 90;
+    const f8x = radius * cosT / denom;
+    const f8y = 15 * sinT * cosT / denom + 10;
+    const f8z = depth * sinT;
+    camera.position.lerp(new THREE.Vector3(f8x, f8y, f8z), 0.03);
+    // Look ahead on the curve
+    const lt = theta + 0.15;
+    const sinL = Math.sin(lt), cosL = Math.cos(lt);
+    const denomL = 1 + sinL * sinL;
+    controls.target.lerp(new THREE.Vector3(
+      radius * cosL / denomL,
+      15 * sinL * cosL / denomL + 10,
+      depth * sinL
+    ), 0.03);
+  }
+
   updateFloat(t);
 
   // Keep pinned card next to pinned artifact on screen
@@ -1631,6 +1695,17 @@ document.getElementById('t-orbit').addEventListener('click', function() {
 document.getElementById('t-autofly').addEventListener('click', function() {
   this.classList.toggle('on');
   autoFly = this.classList.contains('on');
+});
+document.getElementById('t-figure8').addEventListener('click', function() {
+  this.classList.toggle('on');
+  figure8Mode = this.classList.contains('on');
+  if (figure8Mode) {
+    if (!autoFly) { autoFly = true; document.getElementById('t-autofly').classList.add('on'); }
+  }
+});
+document.getElementById('t-wave').addEventListener('click', function() {
+  this.classList.toggle('on');
+  waveMode = this.classList.contains('on');
 });
 
 // ─── WebGL detection ───
