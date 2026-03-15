@@ -813,17 +813,29 @@ function updateFloat(t) {
       }
 
       const isPinned = pinnedInstance && pinnedInstance.groupIdx === g.mesh.userData.groupIdx && pinnedInstance.instanceId === li;
-      const s = (isPinned ? d.baseScale * 1.6 : d.baseScale) * scaleMul;
-      _floatDummy.position.set(px, py, pz);
-      _floatDummy.scale.set(s, s, s);
+
       if (isPinned) {
-        // Slow 360 spin on all axes for pinned artifact
+        // Suspend pinned artifact in front of camera, slightly left of center
+        const dir = new THREE.Vector3();
+        camera.getWorldDirection(dir);
+        const right = new THREE.Vector3().crossVectors(dir, camera.up).normalize();
+        const pinPos = camera.position.clone().add(dir.multiplyScalar(25)).add(right.multiplyScalar(-3));
+        const ps = d.baseScale * 2.5 * scaleMul;
+        _floatDummy.position.copy(pinPos);
+        _floatDummy.scale.set(ps, ps, ps);
         _floatDummy.rotation.set(t * 0.4, t * 0.6, t * 0.2);
+        _floatDummy.updateMatrix();
+        g.mesh.setMatrixAt(li, _floatDummy.matrix);
+        // Store world position for card placement
+        pinnedInstance.worldPos = pinPos;
       } else {
+        const s = d.baseScale * scaleMul;
+        _floatDummy.position.set(px, py, pz);
+        _floatDummy.scale.set(s, s, s);
         _floatDummy.rotation.set(0, t * 0.15 + d.phase, 0);
+        _floatDummy.updateMatrix();
+        g.mesh.setMatrixAt(li, _floatDummy.matrix);
       }
-      _floatDummy.updateMatrix();
-      g.mesh.setMatrixAt(li, _floatDummy.matrix);
       needsUpdate = true;
     });
     if (needsUpdate) g.mesh.instanceMatrix.needsUpdate = true;
@@ -899,10 +911,6 @@ function onClick(e) {
 
     card.classList.add('pinned');
     card.style.display = 'block';
-    // Position card at bottom-left of viewport
-    card.style.left = '20px';
-    card.style.bottom = '90px';
-    card.style.top = 'auto';
   } else {
     // Click on empty space — unpin
     unpinInstance();
@@ -947,6 +955,17 @@ function animate(){
 
   fly();
   updateFloat(t);
+
+  // Keep pinned card next to pinned artifact on screen
+  if (pinnedInstance && pinnedInstance.worldPos) {
+    const projected = pinnedInstance.worldPos.clone().project(camera);
+    const sx = (projected.x * 0.5 + 0.5) * innerWidth;
+    const sy = (-projected.y * 0.5 + 0.5) * innerHeight;
+    const card = document.getElementById('album-card');
+    card.style.left = Math.min(Math.max(sx + 30, 10), innerWidth - 400) + 'px';
+    card.style.top = Math.min(Math.max(sy - 40, 10), innerHeight - 180) + 'px';
+    card.style.bottom = 'auto';
+  }
 
   // Rotate labels with sphere
   if (layoutMode === 'sphere' && autoFly) {
