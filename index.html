@@ -29,8 +29,13 @@
   #hud h1 { font-size: 10px; letter-spacing: 5px; color: #333; text-transform: uppercase; }
   #hud .sub { font-size: 8px; letter-spacing: 2px; color: #666; margin-top: 2px; }
 
+  #bottom-left {
+    position: fixed; bottom: 20px; left: 20px; z-index: 10;
+    display: flex; flex-direction: column; gap: 12px;
+    pointer-events: none;
+  }
+  #bottom-left > * { pointer-events: auto; }
   #info {
-    position: fixed; bottom: 52px; left: 20px; z-index: 10;
     font-size: 13px; letter-spacing: 1.5px; color: #444;
     line-height: 1.9; pointer-events: none;
   }
@@ -148,9 +153,6 @@
   #ctrl-panel hr { border: none; border-top: 1px solid #f0f0f0; margin: 10px 0; }
 
   /* Upload prompt (bottom-left) */
-  #upload-bar {
-    position: fixed; bottom: 20px; left: 20px; z-index: 10;
-  }
   #upload-bar .ub-link {
     font-family: inherit; font-size: 13px; letter-spacing: 2px;
     text-transform: uppercase; color: #555; cursor: pointer;
@@ -174,7 +176,7 @@
 
   /* Artifact Archive */
   #artifact-bag {
-    position: fixed; bottom: 110px; left: 20px; z-index: 15;
+    position: relative;
   }
   #artifact-bag .ab-toggle {
     font-family: inherit; font-size: 13px; letter-spacing: 3px;
@@ -260,7 +262,30 @@
   <h1>Galaxy Artifact</h1>
   <div class="sub" id="hud-sub"></div>
 </div>
-<div id="info"></div>
+<div id="bottom-left">
+  <div id="artifact-bag">
+    <button class="ab-toggle" id="ab-toggle">
+      <span class="ab-icon">♡</span>
+      <span class="ab-count" id="ab-count">0</span>
+      <span class="ab-label">Artifact Archive</span>
+    </button>
+    <div class="ab-panel" id="ab-panel">
+      <div class="ab-header">
+        <span>Artifact Archive</span>
+        <button class="ab-export" id="ab-export" title="Export collection">Export</button>
+      </div>
+      <div class="ab-list" id="ab-list"></div>
+      <div class="ab-empty" id="ab-empty">Heart artifacts to build your archive</div>
+    </div>
+  </div>
+  <div id="info"></div>
+  <div id="upload-bar">
+    <button class="ub-link" id="upload-btn">Upload your own CSV or XML</button>
+    <input type="file" id="file-input" accept=".csv,.tsv,.txt,.xml,text/*,application/xml">
+    <div class="ub-status" id="upload-status"></div>
+    <div class="ub-progress" id="upload-progress"><div class="ub-progress-fill" id="upload-progress-fill"></div></div>
+  </div>
+</div>
 
 <button id="ctrl-toggle">Customize</button>
 <div id="ctrl-panel">
@@ -308,29 +333,6 @@
 </div>
 
 <div id="loading">/// Loading library... ///</div>
-
-<div id="artifact-bag">
-  <button class="ab-toggle" id="ab-toggle">
-    <span class="ab-icon">♡</span>
-    <span class="ab-count" id="ab-count">0</span>
-    <span class="ab-label">Artifact Archive</span>
-  </button>
-  <div class="ab-panel" id="ab-panel">
-    <div class="ab-header">
-      <span>Artifact Archive</span>
-      <button class="ab-export" id="ab-export" title="Export collection">Export</button>
-    </div>
-    <div class="ab-list" id="ab-list"></div>
-    <div class="ab-empty" id="ab-empty">Heart artifacts to build your archive</div>
-  </div>
-</div>
-
-<div id="upload-bar">
-  <button class="ub-link" id="upload-btn">Upload your own CSV or XML</button>
-  <input type="file" id="file-input" accept=".csv,.tsv,.txt,.xml,text/*,application/xml">
-  <div class="ub-status" id="upload-status"></div>
-  <div class="ub-progress" id="upload-progress"><div class="ub-progress-fill" id="upload-progress-fill"></div></div>
-</div>
 
 <script type="importmap">
 { "imports": {
