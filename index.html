@@ -1376,8 +1376,8 @@ function updateFloat(t) {
 
 // ─── Fly ───
 const keys={};
-function onKey(e){if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','w','a','s','d'].includes(e.key)){e.preventDefault();keys[e.key]=true}}
-function onKeyUp(e){keys[e.key]=false}
+function onKey(e){const t=e.target.tagName;if(t==='INPUT'||t==='SELECT'||t==='TEXTAREA')return;if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','w','a','s','d'].includes(e.key)){e.preventDefault();keys[e.key]=true}}
+function onKeyUp(e){const t=e.target.tagName;if(t==='INPUT'||t==='SELECT'||t==='TEXTAREA')return;keys[e.key]=false}
 function fly(){
   if (figure8Mode && autoFly) return;
   const sp=flySpeed;
