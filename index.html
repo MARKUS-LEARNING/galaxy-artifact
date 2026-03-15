@@ -830,15 +830,15 @@ function updateFloat(t) {
       const isPinned = pinnedInstance && pinnedInstance.groupIdx === g.mesh.userData.groupIdx && pinnedInstance.instanceId === li;
 
       if (isPinned) {
-        // Smooth swoop: lerp from origin to target over ~1.2 seconds
+        // Smooth swoop: lerp from origin to target over ~1.5 seconds
         const elapsed = t - pinnedInstance.pinTime;
-        const progress = Math.min(elapsed / 1.2, 1.0);
+        const progress = Math.min(elapsed / 1.5, 1.0);
         // Ease-out cubic for graceful deceleration
         const ease = 1 - Math.pow(1 - progress, 3);
 
         const currentPos = new THREE.Vector3().lerpVectors(pinnedInstance.originPos, pinnedInstance.targetPos, ease);
         const baseS = d.baseScale * scaleMul;
-        const targetS = d.baseScale * 2.5 * scaleMul;
+        const targetS = d.baseScale * 5.0 * scaleMul;
         const ps = baseS + (targetS - baseS) * ease;
 
         _floatDummy.position.copy(currentPos);
@@ -913,7 +913,9 @@ function onClick(e) {
     const originPos = h.point.clone();
     const dir = new THREE.Vector3();
     camera.getWorldDirection(dir);
-    const targetPos = camera.position.clone().add(dir.multiplyScalar(25));
+    const right = new THREE.Vector3().crossVectors(dir, camera.up).normalize();
+    // Place artifact slightly left of center so card fits to the right
+    const targetPos = camera.position.clone().add(dir.multiplyScalar(12)).add(right.multiplyScalar(-2));
     const pinTime = clock.getElapsedTime();
     pinnedInstance = { groupIdx: gi, instanceId: h.instanceId, entry, originPos, targetPos, pinTime, settled: false };
 
@@ -991,10 +993,11 @@ function animate(){
     const card = document.getElementById('album-card');
     // Fade card in after swoop completes
     const elapsed = t - pinnedInstance.pinTime;
-    const cardFade = Math.min(Math.max((elapsed - 0.8) / 0.4, 0), 1);
+    const cardFade = Math.min(Math.max((elapsed - 1.0) / 0.5, 0), 1);
     card.style.opacity = cardFade;
-    card.style.left = Math.min(Math.max(sx + 40, 10), innerWidth - 400) + 'px';
-    card.style.top = Math.min(Math.max(sy - 60, 10), innerHeight - 180) + 'px';
+    // Place card to the right of the artifact with healthy spacing
+    card.style.left = Math.min(Math.max(sx + 80, 10), innerWidth - 400) + 'px';
+    card.style.top = Math.min(Math.max(sy - 80, 10), innerHeight - 200) + 'px';
     card.style.bottom = 'auto';
   }
 
