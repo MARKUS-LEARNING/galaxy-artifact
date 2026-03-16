@@ -31,16 +31,16 @@
   ::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.15); border-radius: 4px; }
   ::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,0.25); }
 
-  canvas { display: block; }
+  canvas { display: block; position: fixed; top: 0; left: 0; }
 
   #hud {
     position: fixed; top: 20px; left: 20px; z-index: 10; pointer-events: none;
   }
   #hud h1 {
-    font-size: 10px; letter-spacing: 5px; color: #333; text-transform: uppercase;
+    font-size: 14px; letter-spacing: 6px; color: #333; text-transform: uppercase;
     animation: hud-entrance 1.2s cubic-bezier(0.22, 1, 0.36, 1) both;
   }
-  #hud .sub { font-size: 8px; letter-spacing: 2px; color: #666; margin-top: 2px; }
+  #hud .sub { font-size: 9px; letter-spacing: 2px; color: #666; margin-top: 3px; }
 
   #bottom-left {
     position: fixed; bottom: 20px; left: 20px; z-index: 10;
@@ -53,40 +53,6 @@
     line-height: 1.9; pointer-events: none;
   }
 
-  /* Navigation panel */
-  #nav-panel {
-    position: fixed; left: 20px; top: 50%; transform: translateY(-50%);
-    z-index: 12; display: flex; flex-direction: column; gap: 6px;
-    align-items: center;
-  }
-  #nav-panel .nav-group {
-    background: rgba(255,255,255,0.92); backdrop-filter: blur(12px);
-    border: 1px solid #eee; border-radius: 6px;
-    padding: 6px; display: flex; flex-direction: column;
-    align-items: center; gap: 2px;
-    box-shadow: 0 2px 12px rgba(0,0,0,0.05);
-  }
-  #nav-panel .nav-label {
-    font-size: 7px; letter-spacing: 2px; text-transform: uppercase;
-    color: #767676; margin-bottom: 2px; user-select: none;
-  }
-  #nav-panel .nav-btn {
-    width: 28px; height: 28px; border: 1px solid #e0e0e0;
-    border-radius: 4px; background: rgba(255,255,255,0.8);
-    color: #666; font-size: 12px; cursor: pointer;
-    display: flex; align-items: center; justify-content: center;
-    font-family: inherit; padding: 0;
-    transition: background 0.15s, border-color 0.15s, color 0.15s;
-    user-select: none; -webkit-user-select: none;
-    touch-action: none;
-  }
-  #nav-panel .nav-btn:hover { background: #f0f0f0; border-color: #bbb; color: #333; }
-  #nav-panel .nav-btn:active { background: #222; color: #fff; border-color: #222; }
-  #nav-panel .nav-btn.nav-home {
-    width: 100%; height: 24px; font-size: 7px;
-    letter-spacing: 2px; text-transform: uppercase;
-    border-radius: 4px;
-  }
   /* Mobile hamburger menu */
   #mobile-menu-btn {
     display: none; position: fixed; bottom: 20px; right: 20px; z-index: 25;
@@ -208,8 +174,8 @@
 
   /* ─── Kinetic Typography (Design Manifesto: Jet Set Radio / tDR) ─── */
   @keyframes hud-entrance {
-    from { opacity: 0; letter-spacing: 14px; filter: blur(2px); }
-    to { opacity: 1; letter-spacing: 5px; filter: blur(0); }
+    from { opacity: 0; letter-spacing: 16px; filter: blur(2px); }
+    to { opacity: 1; letter-spacing: 6px; filter: blur(0); }
   }
   /* ─── Loading Pulse (Design Manifesto: fluid motion) ─── */
   @keyframes loading-pulse {
@@ -593,10 +559,6 @@
   body.dark-mode .sr-empty,
   body.dark-mode .sr-hint { color: rgba(255,255,255,0.4); }
   body.dark-mode .sr-hint { border-color: rgba(255,255,255,0.06); }
-  body.dark-mode #nav-panel .nav-group { background: rgba(12,12,18,0.85); border-color: rgba(255,255,255,0.08); }
-  body.dark-mode #nav-panel .nav-btn { background: rgba(255,255,255,0.06); border-color: rgba(255,255,255,0.1); color: rgba(255,255,255,0.6); }
-  body.dark-mode #nav-panel .nav-btn:hover { background: rgba(255,255,255,0.12); color: #fff; }
-  body.dark-mode #nav-panel .nav-label { color: rgba(255,255,255,0.4); }
   body.dark-mode #upload-bar .ub-link { color: rgba(255,255,255,0.6); }
   body.dark-mode #upload-bar .ub-link:hover { color: #fff; }
   body.dark-mode #mobile-menu-btn { background: rgba(12,12,18,0.9); border-color: rgba(255,255,255,0.1); color: rgba(255,255,255,0.7); }
@@ -643,9 +605,6 @@
     #hud { z-index: 13; }
     #hud h1 { font-size: 10px; }
     #hud .sub { font-size: 9px; }
-
-    /* Nav panel: hidden on mobile */
-    #nav-panel { display: none; }
 
     /* Customize/Filter buttons: hidden on mobile (use hamburger) */
     #ctrl-toggle, #filter-toggle { display: none; }
@@ -714,12 +673,6 @@
   <span id="search-count"></span>
 </div>
 <div id="search-results" role="listbox"></div>
-
-<div id="nav-panel">
-  <div class="nav-group">
-    <button class="nav-btn nav-home" id="nav-home" title="Reset camera" aria-label="Reset camera view">Reset</button>
-  </div>
-</div>
 
 <button id="mobile-menu-btn" aria-label="Open menu" aria-expanded="false">&#9776;</button>
 <div id="mobile-menu" role="dialog" aria-label="Settings menu">
@@ -1993,11 +1946,6 @@ function fly(){
   if(keys.q){camera.position.addScaledVector(_flyUp,sp);controls.target.addScaledVector(_flyUp,sp)}
   if(keys.e){camera.position.addScaledVector(_flyUp,-sp);controls.target.addScaledVector(_flyUp,-sp)}
 }
-
-// ─── Navigation Panel ───
-document.getElementById('nav-home').addEventListener('click', () => {
-  if (headers.length && masterData.length) rebuildViz();
-});
 
 // ─── Click (Album Card + Pin) ───
 function unpinInstance() {
