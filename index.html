@@ -218,27 +218,38 @@
   #search-bar {
     position: fixed; top: 20px; left: 180px; right: 240px;
     z-index: 12; display: flex; align-items: center; gap: 0;
-    max-width: 420px; margin: 0 auto;
+    max-width: 280px; margin: 0 auto;
   }
   #search-bar input {
-    font-family: inherit; font-size: 12px; letter-spacing: 1px;
-    padding: 7px 14px; width: 100%;
+    font-family: inherit; font-size: 10px; letter-spacing: 1px;
+    padding: 5px 10px; width: 100%;
     background: rgba(255,255,255,0.92); backdrop-filter: blur(12px);
     border: 1px solid #ddd; border-radius: 3px;
     color: #333; outline: none;
+    transition: width 0.25s ease, padding 0.25s ease, opacity 0.25s ease;
   }
-  #search-bar input::placeholder { color: #767676; letter-spacing: 2px; font-size: 10px; }
+  #search-bar input::placeholder { color: #999; letter-spacing: 2px; font-size: 8px; }
   #search-bar input:focus { border-color: #999; background: rgba(255,255,255,0.97); }
+  /* Search icon toggle (mobile only) */
+  #search-toggle {
+    display: none; width: 36px; height: 36px; border-radius: 50%;
+    background: rgba(255,255,255,0.95); backdrop-filter: blur(12px);
+    border: 1px solid #ddd; cursor: pointer;
+    font-size: 14px; color: #555; font-family: inherit;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    flex-shrink: 0;
+  }
+  #search-toggle:active { background: #222; color: #fff; border-color: #222; }
   #search-count {
     position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
-    font-family: inherit; font-size: 9px; letter-spacing: 1px;
+    font-family: inherit; font-size: 8px; letter-spacing: 1px;
     color: #aaa; pointer-events: none;
     opacity: 0; transition: opacity 0.2s ease;
   }
   #search-count.visible { opacity: 1; }
   #search-results {
-    position: fixed; top: 52px; left: 180px; right: 240px;
-    z-index: 11; max-width: 420px; margin: 0 auto; max-height: 60vh; overflow-y: auto;
+    position: fixed; top: 46px; left: 180px; right: 240px;
+    z-index: 11; max-width: 280px; margin: 0 auto; max-height: 60vh; overflow-y: auto;
     background: rgba(255,255,255,0.97); backdrop-filter: blur(12px);
     border: 1px solid #eee; border-radius: 4px;
     box-shadow: 0 8px 32px rgba(0,0,0,0.12);
@@ -383,6 +394,72 @@
     background: #fff; color: #555; cursor: pointer;
   }
   #filter-panel .fp-clear:hover { border-color: #999; color: #222; }
+
+  /* ─── Year Wheel Picker (iOS barrel-style) ─── */
+  #year-wheel {
+    position: fixed; bottom: 20px; right: 80px; z-index: 15;
+    display: none; flex-direction: column; align-items: center; gap: 4px;
+  }
+  #year-wheel .yw-label {
+    font-size: 7px; letter-spacing: 2px; text-transform: uppercase;
+    color: #999;
+  }
+  #year-wheel .yw-container {
+    position: relative; width: 72px; height: 140px;
+    overflow: hidden; border-radius: 8px;
+    background: rgba(255,255,255,0.95); backdrop-filter: blur(12px);
+    border: 1px solid #e0e0e0;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+    -webkit-mask-image: linear-gradient(to bottom,
+      transparent 0%, black 30%, black 70%, transparent 100%);
+    mask-image: linear-gradient(to bottom,
+      transparent 0%, black 30%, black 70%, transparent 100%);
+  }
+  #year-wheel .yw-selection {
+    position: absolute; top: 50%; left: 4px; right: 4px;
+    height: 30px; transform: translateY(-50%);
+    border-top: 1.5px solid #333; border-bottom: 1.5px solid #333;
+    pointer-events: none; z-index: 1;
+  }
+  #year-wheel .yw-scroll {
+    width: 100%; height: 100%;
+    overflow-y: scroll; -webkit-overflow-scrolling: touch;
+    scroll-snap-type: y mandatory;
+    scrollbar-width: none;
+  }
+  #year-wheel .yw-scroll::-webkit-scrollbar { display: none; }
+  #year-wheel .yw-item {
+    height: 28px; display: flex; align-items: center; justify-content: center;
+    font-family: inherit; font-size: 13px; letter-spacing: 1px;
+    color: #555; cursor: pointer; scroll-snap-align: center;
+    transition: color 0.1s, font-weight 0.1s;
+    user-select: none; -webkit-user-select: none;
+  }
+  #year-wheel .yw-item.selected {
+    color: #111; font-weight: 700;
+  }
+  #year-wheel .yw-item.all-years {
+    font-size: 9px; letter-spacing: 2px; text-transform: uppercase;
+    color: #999;
+  }
+  #year-wheel .yw-item.all-years.selected {
+    color: #111; font-weight: 700;
+  }
+  #year-wheel .yw-spacer {
+    height: 56px; flex-shrink: 0;
+  }
+  /* Dark mode */
+  body.dark-mode #year-wheel .yw-container {
+    background: rgba(12,12,18,0.92); border-color: rgba(255,255,255,0.08);
+  }
+  body.dark-mode #year-wheel .yw-selection {
+    border-color: rgba(255,255,255,0.6);
+  }
+  body.dark-mode #year-wheel .yw-item { color: rgba(255,255,255,0.45); }
+  body.dark-mode #year-wheel .yw-item.selected { color: #fff; }
+  body.dark-mode #year-wheel .yw-item.all-years { color: rgba(255,255,255,0.3); }
+  body.dark-mode #year-wheel .yw-item.all-years.selected { color: #fff; }
+  body.dark-mode #year-wheel .yw-label { color: rgba(255,255,255,0.4); }
 
   /* Upload prompt (bottom-left) */
   #upload-bar .ub-link {
@@ -532,6 +609,8 @@
     border-color: rgba(255,255,255,0.3); color: #fff; box-shadow: 0 2px 12px rgba(255,255,255,0.04);
   }
   body.dark-mode #filter-toggle.active { background: rgba(255,255,255,0.85); color: #111; border-color: rgba(255,255,255,0.85); }
+  body.dark-mode #search-toggle { background: rgba(12,12,18,0.9); border-color: rgba(255,255,255,0.1); color: rgba(255,255,255,0.7); }
+  body.dark-mode #search-toggle:active { background: rgba(255,255,255,0.85); color: #111; }
   body.dark-mode #search-bar input {
     background: rgba(255,255,255,0.06); border-color: rgba(255,255,255,0.1); color: #eee;
   }
@@ -613,12 +692,29 @@
 
   /* ─── Mobile (≤768px) ─── */
   @media (max-width: 768px) {
-    /* Search bar: full-width, below HUD logo */
-    #search-bar { left: 12px; right: 12px; top: 52px; transform: none; width: auto; max-width: none; }
-    #search-bar input { width: 100%; font-size: 14px; padding: 10px 60px 10px 14px; min-height: 44px; }
-    #search-bar input::placeholder { font-size: 12px; }
-    #search-count { font-size: 10px; right: 12px; }
-    #search-results { left: 12px; right: 12px; transform: none; width: auto; top: 96px; max-width: none; max-height: 50vh; }
+    /* Search bar: collapsed icon by default, expands on tap */
+    #search-bar {
+      left: auto; right: 12px; top: 16px; transform: none;
+      width: auto; max-width: none; flex-direction: row-reverse; gap: 6px;
+    }
+    #search-toggle { display: flex; align-items: center; justify-content: center; }
+    #search-bar input {
+      width: 0; padding: 0; border: none; opacity: 0;
+      pointer-events: none; position: absolute; right: 42px;
+    }
+    #search-bar.expanded input {
+      width: calc(100vw - 80px); padding: 10px 50px 10px 14px;
+      border: 1px solid #ddd; opacity: 1; pointer-events: auto;
+      font-size: 14px; min-height: 44px; border-radius: 3px;
+      background: rgba(255,255,255,0.97); backdrop-filter: blur(12px);
+    }
+    #search-bar.expanded input::placeholder { font-size: 11px; }
+    #search-bar.expanded #search-toggle { background: #222; color: #fff; border-color: #222; }
+    #search-count { font-size: 10px; right: 54px; }
+    #search-results {
+      left: 12px; right: 12px; transform: none; width: auto;
+      top: 62px; max-width: none; max-height: 50vh;
+    }
     .sr-item { padding: 12px 14px; min-height: 44px; }
     .sr-name { font-size: 13px; }
     .sr-sub { font-size: 11px; }
@@ -664,6 +760,9 @@
     #artifact-bag { width: 100%; }
     #info { font-size: 10px; }
     #upload-bar .ub-link { font-size: 12px; min-height: 44px; display: inline-flex; align-items: center; }
+
+    /* Year wheel: above hamburger button on mobile */
+    #year-wheel { right: 12px; bottom: 80px; }
 
     /* Hamburger menu visible */
     #mobile-menu-btn { display: flex; align-items: center; justify-content: center; }
@@ -714,10 +813,19 @@
 </div>
 
 <div id="search-bar" style="position:relative;">
-  <input type="text" id="search-input" placeholder="Search artifacts..." autocomplete="off" style="padding-right:60px;" role="combobox" aria-expanded="false" aria-controls="search-results" aria-label="Search artifacts">
+  <button id="search-toggle" aria-label="Toggle search">&#x2315;</button>
+  <input type="text" id="search-input" placeholder="Search..." autocomplete="off" style="padding-right:40px;" role="combobox" aria-expanded="false" aria-controls="search-results" aria-label="Search artifacts">
   <span id="search-count"></span>
 </div>
 <div id="search-results" role="listbox"></div>
+
+<div id="year-wheel" aria-label="Year picker">
+  <span class="yw-label">Year</span>
+  <div class="yw-container">
+    <div class="yw-selection"></div>
+    <div class="yw-scroll" id="yw-scroll"></div>
+  </div>
+</div>
 
 <button id="mobile-menu-btn" aria-label="Open menu" aria-expanded="false">&#9776;</button>
 <div id="mobile-menu-backdrop"></div>
@@ -957,6 +1065,150 @@ function onFilterChipClick(col, val, chipEl) {
 
 const MAX_FILTER_CHIPS = 20;
 
+// ─── Year Wheel State ───
+let yearWheelCol = null;
+let selectedYear = null; // null = "ALL"
+let yearWheelDebounce = null;
+const YEAR_ITEM_HEIGHT = 28;
+
+function populateYearWheel(hdrs, rows) {
+  const yearCol = findCol(hdrs, ['year']);
+  yearWheelCol = yearCol;
+
+  const yearWheel = document.getElementById('year-wheel');
+  const scrollContainer = document.getElementById('yw-scroll');
+
+  if (!yearCol) {
+    yearWheel.style.display = 'none';
+    return;
+  }
+
+  // Collect unique valid years
+  const yearSet = new Set();
+  rows.forEach(r => {
+    const y = parseInt(r[yearCol]);
+    const validYear = y > 1900 && y <= 2030;
+    if (validYear) {
+      yearSet.add(y);
+    }
+  });
+
+  const sortedYears = [...yearSet].sort((a, b) => a - b);
+
+  if (sortedYears.length < 2) {
+    yearWheel.style.display = 'none';
+    return;
+  }
+
+  // Build wheel items
+  scrollContainer.innerHTML = '';
+
+  // Top spacer (so "ALL" can center in the selection window)
+  const topSpacer = document.createElement('div');
+  topSpacer.className = 'yw-spacer';
+  scrollContainer.appendChild(topSpacer);
+
+  // "ALL" option
+  const allItem = document.createElement('div');
+  allItem.className = 'yw-item all-years selected';
+  allItem.textContent = 'All';
+  allItem.dataset.year = '';
+  scrollContainer.appendChild(allItem);
+
+  // Year items
+  sortedYears.forEach(year => {
+    const item = document.createElement('div');
+    item.className = 'yw-item';
+    item.textContent = year;
+    item.dataset.year = year;
+    scrollContainer.appendChild(item);
+  });
+
+  // Bottom spacer
+  const bottomSpacer = document.createElement('div');
+  bottomSpacer.className = 'yw-spacer';
+  scrollContainer.appendChild(bottomSpacer);
+
+  yearWheel.style.display = 'flex';
+  selectedYear = null;
+
+  // ─── Scroll-snap detection ───
+  scrollContainer.addEventListener('scroll', () => {
+    clearTimeout(yearWheelDebounce);
+    yearWheelDebounce = setTimeout(() => {
+      updateYearSelection(scrollContainer);
+    }, 80);
+  });
+
+  // ─── Tap to select ───
+  scrollContainer.addEventListener('click', (e) => {
+    const item = e.target.closest('.yw-item');
+    if (!item) return;
+
+    const itemIndex = [...scrollContainer.querySelectorAll('.yw-item')].indexOf(item);
+    const targetScroll = itemIndex * YEAR_ITEM_HEIGHT;
+    scrollContainer.scrollTo({ top: targetScroll, behavior: 'smooth' });
+  });
+}
+
+function updateYearSelection(scrollContainer) {
+  const scrollTop = scrollContainer.scrollTop;
+  const items = scrollContainer.querySelectorAll('.yw-item');
+  const centerOffset = scrollTop + (140 / 2) - YEAR_ITEM_HEIGHT / 2;
+  const closestIndex = Math.round(centerOffset / YEAR_ITEM_HEIGHT);
+  const clampedIndex = Math.max(0, Math.min(closestIndex, items.length - 1));
+  const selectedItem = items[clampedIndex];
+
+  // Update visual selection
+  items.forEach(item => {
+    item.classList.remove('selected');
+  });
+  selectedItem.classList.add('selected');
+
+  // Update filter
+  const yearValue = selectedItem.dataset.year;
+  const isAllYears = yearValue === '';
+  const previousYear = selectedYear;
+
+  if (isAllYears) {
+    selectedYear = null;
+  } else {
+    selectedYear = yearValue;
+  }
+
+  // Only rebuild if selection changed
+  const selectionChanged = previousYear !== selectedYear;
+  if (selectionChanged) {
+    applyYearFilter();
+  }
+}
+
+function applyYearFilter() {
+  if (!yearWheelCol) return;
+
+  if (selectedYear === null) {
+    // Remove year filter
+    delete activeFilters[yearWheelCol];
+  } else {
+    // Set year filter to single year
+    activeFilters[yearWheelCol] = new Set([selectedYear]);
+  }
+
+  // Sync chip UI in filter panel
+  const filterChips = document.querySelectorAll('#filter-list .fp-chip');
+  filterChips.forEach(chip => {
+    const chipCol = chip.dataset.col;
+    const chipVal = chip.dataset.val;
+    if (chipCol === yearWheelCol) {
+      const shouldBeOn = selectedYear !== null && chipVal === selectedYear;
+      chip.classList.toggle('on', shouldBeOn);
+    }
+  });
+
+  clearTimeout(_filterDebounce);
+  _filterDebounce = setTimeout(rebuildViz, 150);
+}
+
 function populateFilterPanel(hdrs, rows) {
   const sortSelect = document.getElementById('sort-col');
   sortSelect.innerHTML = '<option value="">\u2014 None \u2014</option>';
@@ -994,6 +1246,8 @@ function populateFilterPanel(hdrs, rows) {
     shown.forEach(val => {
       const chip = document.createElement('button');
       chip.className = 'fp-chip';
+      chip.dataset.col = col;
+      chip.dataset.val = val;
       const display = val || '(empty)';
       const label = display.length > 20 ? display.slice(0, 20) + '..' : display;
       chip.innerHTML = escapeHtml(label) + '<span class="fp-chip-count">' + valueFreq[val] + '</span>';
@@ -2393,6 +2647,7 @@ function loadData(text) {
   activeSortCol = null;
   activeSortDir = 'asc';
   populateFilterPanel(h, masterData);
+  populateYearWheel(h, masterData);
   rebuildViz();
   announce(totalRows.toLocaleString() + ' tracks loaded');
 }
@@ -2445,6 +2700,7 @@ function handleFile(f) {
           masterData = sample(r);
           activeFilters = {}; activeSortCol = null; activeSortDir = 'asc';
           populateFilterPanel(h, masterData);
+          populateYearWheel(h, masterData);
           rebuildViz();
           setProgress(100);
           status.textContent = `/// ${totalRows.toLocaleString()} tracks loaded ///`;
@@ -2475,6 +2731,7 @@ function handleFile(f) {
           masterData = msg.rows;
           activeFilters = {}; activeSortCol = null; activeSortDir = 'asc';
           populateFilterPanel(headers, masterData);
+          populateYearWheel(headers, masterData);
           rebuildViz();
           setProgress(100);
           status.textContent = `/// ${totalRows.toLocaleString()} tracks loaded ///`;
@@ -2711,6 +2968,16 @@ document.getElementById('filter-clear').addEventListener('click', () => {
   document.getElementById('sort-dir').textContent = 'ASC';
   document.getElementById('sort-dir').classList.add('on');
   document.querySelectorAll('#filter-list .fp-chip').forEach(c => c.classList.remove('on'));
+  // Reset year wheel to "All"
+  selectedYear = null;
+  const ywScroll = document.getElementById('yw-scroll');
+  if (ywScroll) {
+    ywScroll.scrollTo({ top: 0, behavior: 'smooth' });
+    const ywItems = ywScroll.querySelectorAll('.yw-item');
+    ywItems.forEach(item => item.classList.remove('selected'));
+    const allItem = ywScroll.querySelector('.all-years');
+    if (allItem) allItem.classList.add('selected');
+  }
   rebuildViz();
 });
 
@@ -2890,9 +3157,33 @@ searchInput.addEventListener('focus', () => {
 });
 
 document.addEventListener('click', (e) => {
-  if (!e.target.closest('#search-bar') && !e.target.closest('#search-results')) {
+  const clickedOutsideSearch = !e.target.closest('#search-bar') && !e.target.closest('#search-results');
+  if (clickedOutsideSearch) {
     searchResults.classList.remove('open');
     searchInput.setAttribute('aria-expanded', 'false');
+
+    // Collapse mobile search bar when tapping outside
+    const searchBar = document.getElementById('search-bar');
+    const isExpanded = searchBar.classList.contains('expanded');
+    if (isExpanded && isMobile()) {
+      searchBar.classList.remove('expanded');
+      searchInput.blur();
+    }
+  }
+});
+
+// ─── Mobile Search Toggle ───
+const searchToggleBtn = document.getElementById('search-toggle');
+searchToggleBtn.addEventListener('click', (e) => {
+  e.stopPropagation();
+  const searchBar = document.getElementById('search-bar');
+  const isExpanded = searchBar.classList.contains('expanded');
+  if (isExpanded) {
+    searchBar.classList.remove('expanded');
+    searchInput.blur();
+  } else {
+    searchBar.classList.add('expanded');
+    searchInput.focus();
   }
 });
 
