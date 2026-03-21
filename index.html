@@ -1354,7 +1354,9 @@ function initScene(){
   scene.background=new THREE.Color(0xffffff);
   scene.fog=new THREE.FogExp2(0xffffff,0.0004);
   camera=new THREE.PerspectiveCamera(55,innerWidth/innerHeight,0.5,3000);
-  renderer=new THREE.WebGLRenderer({antialias:!isMobile(),powerPreference:isMobile()?'default':'high-performance'});
+  const disableAntialias = isMobile();
+  const gpuPreference = isMobile() ? 'default' : 'high-performance';
+  renderer=new THREE.WebGLRenderer({ antialias: !disableAntialias, powerPreference: gpuPreference });
   renderer.setSize(innerWidth,innerHeight);
   renderer.setPixelRatio(Math.min(devicePixelRatio,2));
   renderer.toneMapping=THREE.ACESFilmicToneMapping;
@@ -1965,16 +1967,49 @@ function updateFloat(t) {
 // ─── Fly ───
 const keys={};
 function onKey(e){
-  const t=e.target.tagName;if(t==='INPUT'||t==='SELECT'||t==='TEXTAREA')return;
+  const tag = e.target.tagName;
+  const isFormField = tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA';
+  if (isFormField) return;
+
   // Escape closes any open panel/card (Phase 4b)
-  if(e.key==='Escape'){
+  if (e.key === 'Escape') {
     e.preventDefault();
-    if(document.getElementById('album-card').style.display==='block'){unpinInstance();return}
-    const mm=document.getElementById('mobile-menu');
-    if(mm&&mm.classList.contains('open')){mm.querySelector('.mm-close').click();return}
-    if(document.getElementById('ctrl-panel').classList.contains('open')){document.getElementById('ctrl-panel').classList.remove('open');document.getElementById('ctrl-toggle').setAttribute('aria-expanded','false');return}
-    if(document.getElementById('filter-panel').classList.contains('open')){document.getElementById('filter-panel').classList.remove('open');document.getElementById('filter-toggle').setAttribute('aria-expanded','false');return}
-    if(document.getElementById('search-results').classList.contains('open')){document.getElementById('search-results').classList.remove('open');document.getElementById('search-input').setAttribute('aria-expanded','false');return}
+
+    const albumCard = document.getElementById('album-card');
+    const albumCardVisible = albumCard.style.display === 'block';
+    if (albumCardVisible) { unpinInstance(); return; }
+
+    const mobileMenu = document.getElementById('mobile-menu');
+    const mobileMenuOpen = mobileMenu && mobileMenu.classList.contains('open');
+    if (mobileMenuOpen) {
+      const closeBtn = mobileMenu.querySelector('.mm-close');
+      closeBtn.click();
+      return;
+    }
+
+    const ctrlPanel = document.getElementById('ctrl-panel');
+    const ctrlPanelOpen = ctrlPanel.classList.contains('open');
+    if (ctrlPanelOpen) {
+      ctrlPanel.classList.remove('open');
+      document.getElementById('ctrl-toggle').setAttribute('aria-expanded', 'false');
+      return;
+    }
+
+    const filterPanel = document.getElementById('filter-panel');
+    const filterPanelOpen = filterPanel.classList.contains('open');
+    if (filterPanelOpen) {
+      filterPanel.classList.remove('open');
+      document.getElementById('filter-toggle').setAttribute('aria-expanded', 'false');
+      return;
+    }
+
+    const searchResults = document.getElementById('search-results');
+    const searchOpen = searchResults.classList.contains('open');
+    if (searchOpen) {
+      searchResults.classList.remove('open');
+      document.getElementById('search-input').setAttribute('aria-expanded', 'false');
+      return;
+    }
     return;
   }
   if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','w','a','s','d','q','e'].includes(e.key)){e.preventDefault();keys[e.key]=true}
@@ -2125,36 +2160,55 @@ document.getElementById('album-card').querySelector('.ac-close').addEventListene
 {
   const acCard = document.getElementById('album-card');
   const acHandle = acCard.querySelector('.ac-handle');
-  let _acDragStartY = 0, _acDragY = 0, _acDragging = false;
+  const CARD_DISMISS_THRESHOLD = 80;
+
+  let acDragStartY = 0;
+  let acDragDeltaY = 0;
+  let acDragging = false;
+
+  function resetCardDragState() {
+    acDragging = false;
+    acCard.style.transition = '';
+    acCard.style.transform = '';
+  }
+
   acHandle.addEventListener('pointerdown', (e) => {
     if (!isMobile()) return;
-    _acDragging = true; _acDragStartY = e.clientY; _acDragY = 0;
+
+    acDragging = true;
+    acDragStartY = e.clientY;
+    acDragDeltaY = 0;
     acCard.style.transition = 'none';
     acHandle.setPointerCapture(e.pointerId);
   });
+
   acHandle.addEventListener('pointermove', (e) => {
-    if (!_acDragging) return;
-    _acDragY = Math.max(0, e.clientY - _acDragStartY);
-    acCard.style.transform = `translateY(${_acDragY}px)`;
+    if (!acDragging) return;
+
+    const rawDelta = e.clientY - acDragStartY;
+    acDragDeltaY = Math.max(0, rawDelta);
+    acCard.style.transform = `translateY(${acDragDeltaY}px)`;
   });
+
   acHandle.addEventListener('pointerup', () => {
-    if (!_acDragging) return;
-    _acDragging = false;
+    if (!acDragging) return;
+
+    acDragging = false;
     acCard.style.transition = '';
-    if (_acDragY > 80) {
+
+    const swipedFarEnough = acDragDeltaY > CARD_DISMISS_THRESHOLD;
+    if (swipedFarEnough) {
       acCard.style.transform = '';
       unpinInstance();
     } else {
       acCard.style.transform = 'translateY(0)';
-      setTimeout(() => { acCard.style.transform = ''; }, 300);
+      setTimeout(() => {
+        acCard.style.transform = '';
+      }, 300);
     }
   });
-  acHandle.addEventListener('pointercancel', () => {
-    if (!_acDragging) return;
-    _acDragging = false;
-    acCard.style.transition = '';
-    acCard.style.transform = '';
-  });
+
+  acHandle.addEventListener('pointercancel', resetCardDragState);
 }
 
 // ─── Heart click ───
@@ -2846,107 +2900,171 @@ document.addEventListener('click', (e) => {
 const mobileMenuBtn = document.getElementById('mobile-menu-btn');
 const mobileMenu = document.getElementById('mobile-menu');
 const mobileBackdrop = document.getElementById('mobile-menu-backdrop');
+const HAMBURGER_ICON = '\u2630';
+const CLOSE_ICON = '\u2715';
+const MENU_DISMISS_THRESHOLD = 100;
+const BACKDROP_FADE_DISTANCE = 300;
+const BACKDROP_TRANSITION_MS = 300;
+
 if (mobileMenuBtn && mobileMenu) {
-  let _mobileMenuPopulated = false;
+  let menuContentReparented = false;
 
   function openMobileMenu() {
-    if (mobileMenu.classList.contains('open')) return;
+    const alreadyOpen = mobileMenu.classList.contains('open');
+    if (alreadyOpen) return;
+
     mobileMenu.classList.add('open');
     mobileMenuBtn.setAttribute('aria-expanded', 'true');
-    mobileMenuBtn.textContent = '\u2715';
+    mobileMenuBtn.textContent = CLOSE_ICON;
     mobileBackdrop.style.display = 'block';
-    requestAnimationFrame(() => mobileBackdrop.classList.add('visible'));
-    if (!_mobileMenuPopulated) {
+    requestAnimationFrame(() => {
+      mobileBackdrop.classList.add('visible');
+    });
+
+    if (!menuContentReparented) {
       populateMobileMenu();
-      _mobileMenuPopulated = true;
+      menuContentReparented = true;
     }
   }
+
   function closeMobileMenu() {
-    if (!mobileMenu.classList.contains('open')) return;
+    const alreadyClosed = !mobileMenu.classList.contains('open');
+    if (alreadyClosed) return;
+
     mobileMenu.classList.remove('open');
     mobileMenu.style.transform = '';
     mobileMenuBtn.setAttribute('aria-expanded', 'false');
-    mobileMenuBtn.textContent = '\u2630';
+    mobileMenuBtn.textContent = HAMBURGER_ICON;
     mobileBackdrop.classList.remove('visible');
-    setTimeout(() => { mobileBackdrop.style.display = 'none'; }, 300);
-    if (_mobileMenuPopulated) {
+
+    setTimeout(() => {
+      mobileBackdrop.style.display = 'none';
+    }, BACKDROP_TRANSITION_MS);
+
+    if (menuContentReparented) {
       restoreDesktopPanels();
-      _mobileMenuPopulated = false;
+      menuContentReparented = false;
     }
   }
 
+  // Toggle menu on hamburger tap
   mobileMenuBtn.addEventListener('click', () => {
-    if (mobileMenu.classList.contains('open')) closeMobileMenu();
-    else openMobileMenu();
+    const isOpen = mobileMenu.classList.contains('open');
+    if (isOpen) {
+      closeMobileMenu();
+    } else {
+      openMobileMenu();
+    }
   });
 
-  // Close button inside menu
-  mobileMenu.querySelector('.mm-close').addEventListener('click', closeMobileMenu);
+  // Close button inside menu header
+  const menuCloseBtn = mobileMenu.querySelector('.mm-close');
+  menuCloseBtn.addEventListener('click', closeMobileMenu);
 
   // Backdrop tap to close
   mobileBackdrop.addEventListener('click', closeMobileMenu);
 
-  // Swipe-to-close on drag handle
-  const mmHandle = mobileMenu.querySelector('.mm-handle');
-  let _dragStartY = 0, _dragCurrentY = 0, _dragging = false;
-  mmHandle.addEventListener('pointerdown', (e) => {
-    _dragging = true; _dragStartY = e.clientY; _dragCurrentY = 0;
-    mobileMenu.style.transition = 'none';
-    mmHandle.setPointerCapture(e.pointerId);
-  });
-  mmHandle.addEventListener('pointermove', (e) => {
-    if (!_dragging) return;
-    _dragCurrentY = Math.max(0, e.clientY - _dragStartY);
-    mobileMenu.style.transform = `translateY(${_dragCurrentY}px)`;
-    mobileBackdrop.style.opacity = Math.max(0, 1 - _dragCurrentY / 300);
-  });
-  mmHandle.addEventListener('pointerup', () => {
-    if (!_dragging) return;
-    _dragging = false;
+  // ─── Swipe-to-close on drag handle ───
+  const menuDragHandle = mobileMenu.querySelector('.mm-handle');
+  let dragStartY = 0;
+  let dragDeltaY = 0;
+  let dragging = false;
+
+  function resetMenuDragState() {
+    dragging = false;
     mobileMenu.style.transition = '';
     mobileBackdrop.style.opacity = '';
-    if (_dragCurrentY > 100) {
+    mobileMenu.style.transform = 'translateY(0)';
+  }
+
+  menuDragHandle.addEventListener('pointerdown', (e) => {
+    dragging = true;
+    dragStartY = e.clientY;
+    dragDeltaY = 0;
+    mobileMenu.style.transition = 'none';
+    menuDragHandle.setPointerCapture(e.pointerId);
+  });
+
+  menuDragHandle.addEventListener('pointermove', (e) => {
+    if (!dragging) return;
+
+    const rawDelta = e.clientY - dragStartY;
+    dragDeltaY = Math.max(0, rawDelta);
+    mobileMenu.style.transform = `translateY(${dragDeltaY}px)`;
+
+    const backdropFade = Math.max(0, 1 - dragDeltaY / BACKDROP_FADE_DISTANCE);
+    mobileBackdrop.style.opacity = backdropFade;
+  });
+
+  menuDragHandle.addEventListener('pointerup', () => {
+    if (!dragging) return;
+
+    dragging = false;
+    mobileMenu.style.transition = '';
+    mobileBackdrop.style.opacity = '';
+
+    const swipedFarEnough = dragDeltaY > MENU_DISMISS_THRESHOLD;
+    if (swipedFarEnough) {
       closeMobileMenu();
     } else {
       mobileMenu.style.transform = 'translateY(0)';
     }
   });
-  mmHandle.addEventListener('pointercancel', () => {
-    if (!_dragging) return;
-    _dragging = false;
-    mobileMenu.style.transition = '';
-    mobileBackdrop.style.opacity = '';
-    mobileMenu.style.transform = 'translateY(0)';
-  });
 
-  // Tab switching
-  mobileMenu.querySelectorAll('.mm-tab').forEach(tab => {
+  menuDragHandle.addEventListener('pointercancel', resetMenuDragState);
+
+  // ─── Tab switching ───
+  const allTabs = mobileMenu.querySelectorAll('.mm-tab');
+  const allPanels = mobileMenu.querySelectorAll('.mm-panel');
+
+  allTabs.forEach(tab => {
     tab.addEventListener('click', () => {
-      mobileMenu.querySelectorAll('.mm-tab').forEach(t => { t.classList.remove('active'); t.setAttribute('aria-selected', 'false'); });
-      mobileMenu.querySelectorAll('.mm-panel').forEach(p => p.classList.remove('active'));
+      allTabs.forEach(t => {
+        t.classList.remove('active');
+        t.setAttribute('aria-selected', 'false');
+      });
+      allPanels.forEach(p => {
+        p.classList.remove('active');
+      });
+
       tab.classList.add('active');
       tab.setAttribute('aria-selected', 'true');
-      document.getElementById(tab.dataset.panel).classList.add('active');
+
+      const targetPanelId = tab.dataset.panel;
+      const targetPanel = document.getElementById(targetPanelId);
+      targetPanel.classList.add('active');
     });
   });
 
-  // Move desktop panel content into mobile menu when opened on mobile
+  // ─── Reparent panel content between desktop and mobile ───
   function populateMobileMenu() {
     const mmCustomize = document.getElementById('mm-customize');
     const mmFilter = document.getElementById('mm-filter');
     if (!mmCustomize || !mmFilter) return;
+
     const ctrlPanel = document.getElementById('ctrl-panel');
     const filterPanel = document.getElementById('filter-panel');
-    while (ctrlPanel.firstChild) mmCustomize.appendChild(ctrlPanel.firstChild);
-    while (filterPanel.firstChild) mmFilter.appendChild(filterPanel.firstChild);
+
+    while (ctrlPanel.firstChild) {
+      mmCustomize.appendChild(ctrlPanel.firstChild);
+    }
+    while (filterPanel.firstChild) {
+      mmFilter.appendChild(filterPanel.firstChild);
+    }
   }
+
   function restoreDesktopPanels() {
     const mmCustomize = document.getElementById('mm-customize');
     const mmFilter = document.getElementById('mm-filter');
     const ctrlPanel = document.getElementById('ctrl-panel');
     const filterPanel = document.getElementById('filter-panel');
-    while (mmCustomize.firstChild) ctrlPanel.appendChild(mmCustomize.firstChild);
-    while (mmFilter.firstChild) filterPanel.appendChild(mmFilter.firstChild);
+
+    while (mmCustomize.firstChild) {
+      ctrlPanel.appendChild(mmCustomize.firstChild);
+    }
+    while (mmFilter.firstChild) {
+      filterPanel.appendChild(mmFilter.firstChild);
+    }
   }
 }
 
