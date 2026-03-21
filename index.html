@@ -925,25 +925,41 @@ import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 
 const PALETTES = {
-  phantom:  ['#5D0066','#76FF00','#F04FFF','#A300B3','#580C82','#9B30FF','#00FF41','#D946EF','#7B2D8E','#39004D','#B24BF3','#4AFF23','#E879F9','#6B21A8','#3B0764'],
-  magma:    ['#E52C2C','#F58D39','#FE4773','#FF2D00','#FF6B35','#D62828','#F77F00','#FCBF49','#FF4500','#E63946','#FF7043','#EF5350','#FF8A65','#F4511E','#BF360C'],
-  rogue:    ['#FE4773','#46B3A5','#90335D','#9BFDCE','#FFC0D3','#FF2E63','#08D9D6','#7C2653','#52D1A9','#FFB4C8','#E84393','#00B4D8','#A83279','#6DFFE0','#FF85A1'],
-  depths:   ['#0B3D91','#1565C0','#0277BD','#01579B','#039BE5','#0288D1','#00838F','#006064','#004D40','#00695C','#00796B','#0D47A1','#1A237E','#283593','#1B5E20'],
-  noir:     ['#030303','#CC0000','#C6A25A','#EBB277','#4A4635','#1A1A1A','#8B0000','#D4A853','#C9956B','#3D3A2E','#0D0D0D','#A30000','#B8963E','#D4A574','#5C5742'],
-  saffron:  ['#FFD700','#FF8C00','#E65100','#FF6D00','#FFA000','#F57F17','#EF6C00','#FFB300','#FF9100','#C77C00','#D84315','#BF360C','#E8710A','#FFB74D','#A1887F'],
-  jade:     ['#1B5E20','#2E7D32','#388E3C','#00C853','#00E676','#69F0AE','#004D40','#00897B','#26A69A','#00BFA5','#4CAF50','#43A047','#66BB6A','#81C784','#009688'],
-  analog:   ['#76FF00','#ED8008','#ED3F1C','#5F503E','#A0A0A0','#5BCC00','#D97706','#C43414','#4A3F30','#808080','#8AFF33','#F59E0B','#FF5733','#6B5C4A','#B0B0B0'],
-  regiment: ['#00235D','#AE0028','#656B5C','#CEC2A9','#7AA1CB','#001A47','#8B0020','#4F5447','#B8AD94','#5E87B3','#002D73','#C40030','#7A8170','#E0D5BE','#96B7D9'],
-  mono:     ['#111','#222','#333','#444','#555','#666','#777','#888','#999','#aaa','#bbb','#ccc','#ddd','#e5e5e5','#f0f0f0'],
+  // iPhone 17 Pro — Desert Titanium bronze-to-gold spectrum
+  desert:     ['#C4843B','#D4975A','#B87333','#E8AD6A','#A0652A','#DEB887','#C68E4E','#8B6914','#D2A56C','#BA8C3C','#E6C28E','#9B7432','#CFAA68','#7D5A28','#F0D4A4'],
+  // iPhone 16 — Ultramarine deep blue range
+  ultramarine:['#2B3A8E','#3D50B5','#1A2670','#5468CC','#4358C4','#6678D4','#2940A0','#7888DC','#1E3080','#8A98E4','#3448B0','#9CA8EC','#0F1860','#AEB8F0','#C0C8F4'],
+  // iPhone Air/17 — Soft lavender-purple family
+  lavender:   ['#9B8EC4','#7B6FA0','#B5A8D8','#6A5C90','#C8BEE8','#8878B4','#5A4C80','#D5CCF0','#7466A8','#E2DAF4','#A496CC','#4A3C70','#BBAEE0','#6558A0','#EEE8F8'],
+  // iPhone 17/16 — Rose and pink tones
+  rose:       ['#E8919A','#D4707A','#F2ABB3','#C05060','#F8C5CC','#B84050','#ECBEC4','#A03040','#F5D5DA','#CC6070','#E0A0A8','#982838','#D88890','#882028','#FCD8DC'],
+  // iPhone 16 — Teal and seafoam
+  teal:       ['#3AAFA9','#2B8A84','#5CC4BE','#1D706C','#7CD8D2','#4ABFB9','#167060','#8EE4DE','#358F88','#A0EEE8','#278078','#52C8C2','#0F5E58','#B2F4EE','#C4F8F4'],
+  // iPhone — Natural Titanium silvers and warm grays
+  titanium:   ['#8E8D8A','#A5A49E','#78776E','#BDBCB4','#6A695E','#D4D3CC','#585750','#C8C7C0','#9E9D96','#E0DFD8','#B0AFA8','#4A4940','#CAC9C2','#AEADA6','#EAE9E4'],
+  // Night sky — dark saturated tones (pairs with dark backgrounds)
+  midnight:   ['#4A6FA5','#6B4C9A','#3A5A80','#8B6CAA','#2A4A6A','#5C7AB0','#7B5CA0','#9B8CBC','#4B6A90','#AB9CCC','#3B5A78','#6C5CA8','#8C7CB8','#2A3A5A','#BBACDC'],
+  // Warm sunrise spectrum — amber, coral, honey
+  sunrise:    ['#E8A44A','#D4804A','#F2BE6A','#C06838','#F8D48A','#E09050','#B05830','#F5C878','#CC7840','#F0DC9A','#D89858','#A04828','#E4A860','#964020','#FAE4AA'],
+  // iPhone gradient-inspired — balanced rainbow (restrained, not neon)
+  spectrum:   ['#E06070','#D89050','#E8C050','#70B868','#50A8B8','#5878C8','#7868B8','#A060A8','#C86880','#D8A060','#B8D058','#48B098','#6088D0','#8878C0','#B868A0'],
+  // Monochrome — clean grayscale
+  mono:       ['#111','#222','#333','#444','#555','#666','#777','#888','#999','#aaa','#bbb','#ccc','#ddd','#e5e5e5','#f0f0f0'],
 };
 const BACKGROUNDS = {
-  white: '#ffffff', black: '#0a0a0a', midnight: '#0d1b2a', cream: '#f5f0e8', slate: '#1e293b',
-  charcoal: '#2b2b2b', navy: '#0a1628', plum: '#1a0a2e', forest: '#0a1a0a', ember: '#1a0800',
-  fog: '#c8c8c8', dusk: '#2d1b4e', steel: '#3a3f47', sand: '#d4c5a9', ice: '#e8f0f8',
-  abyss: '#0A0A0F', deep: '#1A1E41',
+  white: '#ffffff',
+  snow: '#F5F5F7',
+  starlight: '#FAF6F0',
+  sand: '#E8DDD0',
+  graphite: '#2C2C2E',
+  black: '#0A0A0A',
+  midnight: '#0D1B2A',
+  indigo: '#1C1C3A',
+  ink: '#121218',
+  mist: '#D8DEE6',
 };
-let activePalette = 'phantom';
-let activeBg = 'white';
+let activePalette = 'desert';
+let activeBg = 'snow';
 const OTHER = '#bbbbbb';
 const MAX_GENRES = 15;
 const MAX_PTS = Infinity;
@@ -1605,8 +1621,9 @@ const _tmpVec3C = new THREE.Vector3();
 // ─── Scene ───
 function initScene(){
   scene=new THREE.Scene();
-  scene.background=new THREE.Color(0xffffff);
-  scene.fog=new THREE.FogExp2(0xffffff,0.0004);
+  const defaultBgColor = new THREE.Color(BACKGROUNDS[activeBg] || '#F5F5F7');
+  scene.background = defaultBgColor;
+  scene.fog = new THREE.FogExp2(defaultBgColor, 0.0004);
   camera=new THREE.PerspectiveCamera(55,innerWidth/innerHeight,0.5,3000);
   const disableAntialias = isMobile();
   const gpuPreference = isMobile() ? 'default' : 'high-performance';
@@ -1678,7 +1695,7 @@ function build(hdrs, rows){
 
   // Assign colors
   colorMap = {};
-  const pal = PALETTES[activePalette] || PALETTES.phantom;
+  const pal = PALETTES[activePalette] || PALETTES.desert;
   topGenres.forEach((g,i) => { colorMap[g] = pal[i % pal.length]; });
 
   function getGenreBucket(row) {
@@ -2892,7 +2909,7 @@ Object.entries(BACKGROUNDS).forEach(([name, hex]) => {
     const col = new THREE.Color(hex);
     scene.background = col;
     scene.fog.color = col;
-    const lightBgs = new Set(['white', 'cream', 'fog', 'sand', 'ice']);
+    const lightBgs = new Set(['white', 'snow', 'starlight', 'sand', 'mist']);
     const isDark = !lightBgs.has(name);
     document.body.classList.toggle('dark-mode', isDark);
     document.getElementById('hud').style.color = isDark ? '#ddd' : '';
