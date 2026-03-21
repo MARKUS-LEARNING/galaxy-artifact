@@ -814,6 +814,8 @@
   <input type="range" id="r-speed" min="-2" max="2" step="0.01" value="0.15">
   <label>Fog</label>
   <input type="range" id="r-fog" min="0" max="0.008" step="0.0002" value="0.0004">
+  <label>Label Size</label>
+  <input type="range" id="r-label-size" min="0.3" max="3" step="0.1" value="1">
   <hr>
   <label>Toggles</label>
   <div class="row">
@@ -822,6 +824,7 @@
     <button class="chip on" id="t-autofly">Auto-Fly</button>
     <button class="chip" id="t-figure8">Figure-8</button>
     <button class="chip" id="t-wave">Wave</button>
+    <button class="chip" id="t-grid">Grid</button>
   </div>
 </div>
 
@@ -970,6 +973,9 @@ let autoFly = true;
 let layoutMode = 'layers'; // 'layers' | 'sphere' | 'helix' | 'grid' | 'stream' | 'schotter' | 'oscillons' | 'mobiles'
 let figure8Mode = false;
 let waveMode = false;
+let labelFontScale = 1.0;
+let showGrid = false;
+let gridGroup = null;
 let selectedCard = null; // currently shown card entry
 
 // ─── Filter & Sort ───
@@ -1966,16 +1972,125 @@ function build(hdrs, rows){
 }
 
 function makeLabel(text, color){
+  const baseFontSize = 28;
+  const fontSize = Math.round(baseFontSize * labelFontScale);
   const c = document.createElement('canvas');
-  c.width=512;c.height=64;
-  const ctx=c.getContext('2d');
-  ctx.font='500 28px Space Mono, monospace';
-  ctx.textAlign='left';ctx.textBaseline='middle';
-  ctx.fillStyle=color||'#999';ctx.globalAlpha=0.85;
-  ctx.fillText(text.length>26?text.slice(0,26)+'..':text,8,32);
-  const tex=new THREE.CanvasTexture(c);tex.minFilter=THREE.LinearFilter;
-  const mat=new THREE.SpriteMaterial({map:tex,transparent:true,opacity:0.7,depthWrite:false});
-  const s=new THREE.Sprite(mat);s.scale.set(12,1.5,1);return s;
+  c.width = 512;
+  c.height = 64;
+  const ctx = c.getContext('2d');
+  ctx.font = '500 ' + fontSize + 'px Space Mono, monospace';
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'middle';
+  ctx.fillStyle = color || '#999';
+  ctx.globalAlpha = 0.85;
+  const maxChars = Math.max(10, Math.round(26 / labelFontScale));
+  const displayText = text.length > maxChars ? text.slice(0, maxChars) + '..' : text;
+  ctx.fillText(displayText, 8, 32);
+  const tex = new THREE.CanvasTexture(c);
+  tex.minFilter = THREE.LinearFilter;
+  const mat = new THREE.SpriteMaterial({map: tex, transparent: true, opacity: 0.7, depthWrite: false});
+  const baseScaleX = 12;
+  const baseScaleY = 1.5;
+  const s = new THREE.Sprite(mat);
+  s.scale.set(baseScaleX * labelFontScale, baseScaleY * labelFontScale, 1);
+  return s;
+}
+
+// ─── Cartesian Grid ───
+function buildGrid() {
+  if (gridGroup) {
+    scene.remove(gridGroup);
+    gridGroup = null;
+  }
+  if (!showGrid) return;
+
+  gridGroup = new THREE.Group();
+  const gridSize = 200;
+  const gridDivisions = 20;
+  const gridColor = 0x555555;
+  const gridOpacity = 0.3;
+
+  // XZ plane grid (floor)
+  const xzGrid = new THREE.GridHelper(gridSize, gridDivisions, gridColor, gridColor);
+  xzGrid.material.transparent = true;
+  xzGrid.material.opacity = gridOpacity;
+  gridGroup.add(xzGrid);
+
+  // XY plane grid (back wall)
+  const xyGrid = new THREE.GridHelper(gridSize, gridDivisions, gridColor, gridColor);
+  xyGrid.rotation.x = Math.PI / 2;
+  xyGrid.position.z = -gridSize / 2;
+  xyGrid.material.transparent = true;
+  xyGrid.material.opacity = gridOpacity * 0.6;
+  gridGroup.add(xyGrid);
+
+  // YZ plane grid (side wall)
+  const yzGrid = new THREE.GridHelper(gridSize, gridDivisions, gridColor, gridColor);
+  yzGrid.rotation.z = Math.PI / 2;
+  yzGrid.position.x = -gridSize / 2;
+  yzGrid.material.transparent = true;
+  yzGrid.material.opacity = gridOpacity * 0.6;
+  gridGroup.add(yzGrid);
+
+  // Axis lines
+  const axisLength = gridSize / 2 + 20;
+  const axisLineWidth = 2;
+
+  const xAxisGeo = new THREE.BufferGeometry().setFromPoints([
+    new THREE.Vector3(-axisLength, 0, 0),
+    new THREE.Vector3(axisLength, 0, 0)
+  ]);
+  const xAxisMat = new THREE.LineBasicMaterial({color: 0xff4444, linewidth: axisLineWidth});
+  gridGroup.add(new THREE.Line(xAxisGeo, xAxisMat));
+
+  const yAxisGeo = new THREE.BufferGeometry().setFromPoints([
+    new THREE.Vector3(0, -axisLength, 0),
+    new THREE.Vector3(0, axisLength, 0)
+  ]);
+  const yAxisMat = new THREE.LineBasicMaterial({color: 0x44ff44, linewidth: axisLineWidth});
+  gridGroup.add(new THREE.Line(yAxisGeo, yAxisMat));
+
+  const zAxisGeo = new THREE.BufferGeometry().setFromPoints([
+    new THREE.Vector3(0, 0, -axisLength),
+    new THREE.Vector3(0, 0, axisLength)
+  ]);
+  const zAxisMat = new THREE.LineBasicMaterial({color: 0x4488ff, linewidth: axisLineWidth});
+  gridGroup.add(new THREE.Line(zAxisGeo, zAxisMat));
+
+  // Axis labels
+  const labelOffset = axisLength + 8;
+
+  const xLabel = makeAxisLabel('X', '#ff4444');
+  xLabel.position.set(labelOffset, 0, 0);
+  gridGroup.add(xLabel);
+
+  const yLabel = makeAxisLabel('Y', '#44ff44');
+  yLabel.position.set(0, labelOffset, 0);
+  gridGroup.add(yLabel);
+
+  const zLabel = makeAxisLabel('Z', '#4488ff');
+  zLabel.position.set(0, 0, labelOffset);
+  gridGroup.add(zLabel);
+
+  scene.add(gridGroup);
+}
+
+function makeAxisLabel(text, color) {
+  const canvas = document.createElement('canvas');
+  canvas.width = 128;
+  canvas.height = 64;
+  const ctx = canvas.getContext('2d');
+  ctx.font = 'bold 48px Space Mono, monospace';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillStyle = color;
+  ctx.fillText(text, 64, 32);
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.minFilter = THREE.LinearFilter;
+  const material = new THREE.SpriteMaterial({map: texture, transparent: true, depthWrite: false});
+  const sprite = new THREE.Sprite(material);
+  sprite.scale.set(8, 4, 1);
+  return sprite;
 }
 
 // ─── Floating Animation ───
@@ -2811,6 +2926,12 @@ document.getElementById('r-speed').addEventListener('input', e => {
 document.getElementById('r-fog').addEventListener('input', e => {
   scene.fog.density = parseFloat(e.target.value);
 });
+let _labelSizeDebounce = null;
+document.getElementById('r-label-size').addEventListener('input', e => {
+  labelFontScale = parseFloat(e.target.value);
+  clearTimeout(_labelSizeDebounce);
+  _labelSizeDebounce = setTimeout(rebuildViz, 120);
+});
 
 // Toggles
 document.getElementById('t-labels').addEventListener('click', function() {
@@ -2836,6 +2957,11 @@ document.getElementById('t-figure8').addEventListener('click', function() {
 document.getElementById('t-wave').addEventListener('click', function() {
   this.classList.toggle('on');
   waveMode = this.classList.contains('on');
+});
+document.getElementById('t-grid').addEventListener('click', function() {
+  this.classList.toggle('on');
+  showGrid = this.classList.contains('on');
+  buildGrid();
 });
 
 // ─── Filter/Sort Panel ───
