@@ -1148,8 +1148,15 @@ function populateYearWheel(hdrs, rows) {
   yearWheel.style.display = 'flex';
   selectedYear = null;
 
-  // ─── Scroll-snap detection ───
+  // Ensure scroll starts at top so "All" is selected
+  scrollContainer.scrollTop = 0;
+
+  // ─── Scroll-snap detection (skip during initial render) ───
+  let yearWheelReady = false;
+  requestAnimationFrame(() => { yearWheelReady = true; });
+
   scrollContainer.addEventListener('scroll', () => {
+    if (!yearWheelReady) return;
     clearTimeout(yearWheelDebounce);
     yearWheelDebounce = setTimeout(() => {
       updateYearSelection(scrollContainer);
@@ -1162,16 +1169,21 @@ function populateYearWheel(hdrs, rows) {
     if (!item) return;
 
     const itemIndex = [...scrollContainer.querySelectorAll('.yw-item')].indexOf(item);
-    const targetScroll = itemIndex * YEAR_ITEM_HEIGHT;
-    scrollContainer.scrollTo({ top: targetScroll, behavior: 'smooth' });
+    const SPACER_HEIGHT = 56;
+    const containerCenter = 140 / 2;
+    const targetScroll = SPACER_HEIGHT + (itemIndex * YEAR_ITEM_HEIGHT) - containerCenter + (YEAR_ITEM_HEIGHT / 2);
+    scrollContainer.scrollTo({ top: Math.max(0, targetScroll), behavior: 'smooth' });
   });
 }
 
 function updateYearSelection(scrollContainer) {
   const scrollTop = scrollContainer.scrollTop;
   const items = scrollContainer.querySelectorAll('.yw-item');
-  const centerOffset = scrollTop + (140 / 2) - YEAR_ITEM_HEIGHT / 2;
-  const closestIndex = Math.round(centerOffset / YEAR_ITEM_HEIGHT);
+  const SPACER_HEIGHT = 56;
+  const containerCenter = 140 / 2;
+  // Items start after the spacer, so subtract spacer from the scroll-to-center calc
+  const centerInContent = scrollTop + containerCenter - SPACER_HEIGHT;
+  const closestIndex = Math.round(centerInContent / YEAR_ITEM_HEIGHT);
   const clampedIndex = Math.max(0, Math.min(closestIndex, items.length - 1));
   const selectedItem = items[clampedIndex];
 
