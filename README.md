@@ -100,11 +100,19 @@ To report a security vulnerability, see [SECURITY.md](./SECURITY.md).
 
 ## Data & Privacy
 
-All visualization happens locally in your browser. This project does not:
-- Collect, store, or transmit your data
-- Use cookies or local storage
-- Include any analytics or tracking scripts
-- Connect to any external API (after page load, all network requests are blocked by CSP)
+All visualization happens locally in your browser. CSV/XML data you upload is parsed
+in-browser and never transmitted to any server. The app does not use cookies,
+analytics, or tracking scripts.
+
+Local browser storage is used for one purpose only: the **Artifact Archive** (your
+hearted/favorited tracks) is persisted to `localStorage` under the `artifactArchive`
+key so your collection survives a page reload. This stays on your device. Clear it
+at any time via your browser's "Clear site data" or by deleting individual entries
+from the in-app archive panel.
+
+A strict Content Security Policy is enforced via a `<meta>` tag, restricting the
+app's network surface to a known allowlist (Google Fonts, plus — when you opt in —
+the Apple Music and Spotify Web API endpoints used for library import).
 
 ## Disclaimer
 
