@@ -24,6 +24,8 @@ import {
   removeAt as removeArtifactAt,
   subscribe as subscribeArchive,
 } from './archive/store.js';
+import { csvSplitRows, csvSplitFields, parseCSV } from './ingestion/csv-parser.js';
+import { parseXML, isXML } from './ingestion/xml-parser.js';
 
 let activePalette = 'rams';
 let activeBg = 'white';
@@ -302,20 +304,14 @@ function updateBagUI() {
 let pinnedInstance = null; // { groupIdx, instanceId, entry, originPos, targetPos, pinTime, settled }
 let unpinning = null; // { groupIdx, instanceId, startPos, startScale, originPos, unpinTime, data }
 
-// ─── CSV Parser ───
-function csvSplitRows(t){const r=[];let c='',q=false;for(let i=0;i<t.length;i++){const ch=t[i];if(ch==='"'){q=!q;c+=ch}else if(ch==='\n'&&!q){r.push(c);c=''}else c+=ch}if(c.trim())r.push(c);return r}
-function csvSplitFields(l){const f=[];let c='',q=false;for(let i=0;i<l.length;i++){const ch=l[i];if(ch==='"'){if(q&&l[i+1]==='"'){c+='"';i++}else q=!q}else if(ch===','&&!q){f.push(c);c=''}else c+=ch}f.push(c);return f}
-function parseCSV(text){
-  const n=text.replace(/\r\n/g,'\n').replace(/\r/g,'\n');
-  const raw=csvSplitRows(n);if(raw.length<2)return{headers:[],rows:[]};
-  const tsv=raw[0].includes('\t');
-  const p=tsv?l=>l.split('\t').map(v=>v.trim().replace(/^"|"$/g,'')):csvSplitFields;
-  const h=p(raw[0]),rows=[];
-  for(let i=1;i<raw.length;i++){if(!raw[i].trim())continue;const v=p(raw[i]);
-    if(v.length>=h.length-5&&v.length<=h.length+2){const r={};h.forEach((k,j)=>r[k]=(v[j]||'').trim());rows.push(r)}}
-  return{headers:h,rows};
-}
 // ─── CSV Web Worker (inline via Blob URL) ───
+//
+// The parser functions live in src/ingestion/csv-parser.js. The
+// worker still gets them by stringifying the imported function
+// objects -- Function.prototype.toString returns the original
+// source verbatim, so csvSplitRows / csvSplitFields end up as
+// function declarations in the worker's global scope, and parseCSV's
+// body resolves the bare references to them lexically.
 const _workerCode = `
   ${csvSplitRows.toString()}
   ${csvSplitFields.toString()}
@@ -332,142 +328,6 @@ const _workerCode = `
 `;
 const _workerBlob = new Blob([_workerCode], { type: 'application/javascript' });
 const _workerUrl = URL.createObjectURL(_workerBlob);
-
-// ─── XML Parser ───
-
-// Apple Music / iTunes plist XML parser
-function parsePlistDict(dictEl) {
-  const obj = {};
-  const children = dictEl.children;
-  for (let i = 0; i < children.length - 1; i++) {
-    if (children[i].tagName === 'key') {
-      const key = children[i].textContent;
-      const val = children[i + 1];
-      const tag = val.tagName;
-      if (tag === 'string' || tag === 'integer' || tag === 'real') {
-        obj[key] = val.textContent;
-      } else if (tag === 'true') {
-        obj[key] = 'true';
-      } else if (tag === 'false') {
-        obj[key] = 'false';
-      } else if (tag === 'date') {
-        obj[key] = val.textContent;
-      }
-      // skip nested dict/array values (playlists, etc.)
-      i++; // advance past value
-    }
-  }
-  return obj;
-}
-
-function parsePlistTracks(doc) {
-  // Structure: <plist><dict> ... <key>Tracks</key><dict> <key>ID</key><dict>track</dict> ... </dict>
-  const root = doc.documentElement; // <plist>
-  const topDict = root.querySelector(':scope > dict');
-  if (!topDict) return null;
-
-  // Find the "Tracks" dict
-  let tracksDict = null;
-  const topChildren = topDict.children;
-  for (let i = 0; i < topChildren.length - 1; i++) {
-    if (topChildren[i].tagName === 'key' && topChildren[i].textContent === 'Tracks') {
-      const next = topChildren[i + 1];
-      if (next.tagName === 'dict') tracksDict = next;
-      break;
-    }
-  }
-  if (!tracksDict) return null;
-
-  // Each track: <key>ID</key><dict>...</dict>
-  const rows = [];
-  const headerSet = new Set();
-  const trackChildren = tracksDict.children;
-  for (let i = 0; i < trackChildren.length - 1; i++) {
-    if (trackChildren[i].tagName === 'key') {
-      const next = trackChildren[i + 1];
-      if (next.tagName === 'dict') {
-        const track = parsePlistDict(next);
-        for (const k of Object.keys(track)) headerSet.add(k);
-        rows.push(track);
-      }
-      i++; // advance past value
-    }
-  }
-  if (!rows.length) return null;
-
-  // Prioritize useful columns for the visualizer
-  const priority = ['Name', 'Artist', 'Album', 'Genre', 'Year', 'Total Time', 'Track Number', 'Play Count', 'Date Added'];
-  const rest = [...headerSet].filter(h => !priority.includes(h)).sort();
-  const headers = [...priority.filter(h => headerSet.has(h)), ...rest];
-
-  return { headers, rows };
-}
-
-function parseXML(text) {
-  const parser = new DOMParser();
-  const doc = parser.parseFromString(text, 'application/xml');
-  if (doc.querySelector('parsererror')) return { headers: [], rows: [] };
-
-  // Detect Apple Music / iTunes plist format
-  if (doc.documentElement.tagName === 'plist') {
-    const result = parsePlistTracks(doc);
-    if (result) return result;
-  }
-
-  // Generic XML: find repeating record elements
-  const root = doc.documentElement;
-  let records = [];
-  // Try direct children first
-  const childTags = {};
-  for (const child of root.children) {
-    childTags[child.tagName] = (childTags[child.tagName] || 0) + 1;
-  }
-  const mostCommonTag = Object.entries(childTags).sort((a, b) => b[1] - a[1])[0];
-  if (mostCommonTag && mostCommonTag[1] > 1) {
-    records = [...root.querySelectorAll(`:scope > ${mostCommonTag[0]}`)];
-  } else {
-    // Try one level deeper (e.g., <root><items><item>...)
-    for (const wrapper of root.children) {
-      const innerTags = {};
-      for (const child of wrapper.children) {
-        innerTags[child.tagName] = (innerTags[child.tagName] || 0) + 1;
-      }
-      const inner = Object.entries(innerTags).sort((a, b) => b[1] - a[1])[0];
-      if (inner && inner[1] > 1) {
-        records = [...wrapper.querySelectorAll(`:scope > ${inner[0]}`)];
-        break;
-      }
-    }
-  }
-  if (!records.length) return { headers: [], rows: [] };
-
-  // Extract headers from first record's child element names + attributes
-  const headerSet = new Set();
-  records.slice(0, 20).forEach(rec => {
-    for (const attr of rec.attributes) headerSet.add(`@${attr.name}`);
-    for (const child of rec.children) headerSet.add(child.tagName);
-  });
-  const headers = [...headerSet];
-
-  const rows = records.map(rec => {
-    const row = {};
-    for (const h of headers) {
-      if (h.startsWith('@')) {
-        row[h] = rec.getAttribute(h.slice(1)) || '';
-      } else {
-        const el = rec.querySelector(`:scope > ${h}`);
-        row[h] = el ? el.textContent.trim() : '';
-      }
-    }
-    return row;
-  });
-
-  return { headers, rows };
-}
-
-function isXML(text) {
-  return text.trimStart().startsWith('<?xml') || text.trimStart().startsWith('<');
-}
 
 // ─── File validation ───
 const MAX_FILE_SIZE_BYTES = 200 * 1024 * 1024;
