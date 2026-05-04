@@ -6,6 +6,14 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
 
 import { PALETTES, BACKGROUNDS, OTHER, MAX_GENRES } from './constants/palettes.js';
 import { GEOMETRIES, NUM_SHAPES, getCachedGeometry } from './constants/geometries.js';
+import { escapeHtml } from './util/escape.js';
+import {
+  buildYouTubeSearchUrl,
+  buildSpotifySearchUrl,
+  buildAppleMusicSearchUrl,
+  buildDiscogsSearchUrl,
+  safeHref,
+} from './util/search-urls.js';
 
 let activePalette = 'rams';
 let activeBg = 'white';
@@ -241,12 +249,6 @@ function saveArtifactArchive() {
   updateBagUI();
 }
 
-function escapeHtml(str) {
-  const d = document.createElement('div');
-  d.textContent = str;
-  return d.innerHTML;
-}
-
 function createSwoopAnimation(nameText, startRect) {
   const bag = document.getElementById('ab-toggle');
   const bagRect = bag.getBoundingClientRect();
@@ -479,32 +481,6 @@ function parseXML(text) {
 
 function isXML(text) {
   return text.trimStart().startsWith('<?xml') || text.trimStart().startsWith('<');
-}
-
-// ─── Safe URL builder ───
-function buildYouTubeSearchUrl(song, artist) {
-  const query = [artist, song].filter(Boolean).join(' ');
-  return 'https://www.youtube.com/results?search_query=' + encodeURIComponent(query);
-}
-function buildSpotifySearchUrl(song, artist) {
-  const query = [artist, song].filter(Boolean).join(' ');
-  return 'https://open.spotify.com/search/' + encodeURIComponent(query);
-}
-function buildAppleMusicSearchUrl(song, artist) {
-  const query = [artist, song].filter(Boolean).join(' ');
-  return 'https://music.apple.com/us/search?term=' + encodeURIComponent(query);
-}
-function buildDiscogsSearchUrl(song, artist) {
-  const query = [artist, song].filter(Boolean).join(' ');
-  return 'https://www.discogs.com/search/?q=' + encodeURIComponent(query) + '&type=all';
-}
-
-function safeHref(url) {
-  try {
-    const parsed = new URL(url);
-    if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') return '#';
-    return url;
-  } catch { return '#'; }
 }
 
 // ─── File validation ───
