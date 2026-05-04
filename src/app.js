@@ -26,6 +26,7 @@ import {
 } from './archive/store.js';
 import { csvSplitRows, csvSplitFields, parseCSV } from './ingestion/csv-parser.js';
 import { parseXML, isXML } from './ingestion/xml-parser.js';
+import { LAYOUTS } from './layouts/index.js';
 
 let activePalette = 'rams';
 let activeBg = 'white';
@@ -423,6 +424,10 @@ function initScene(){
 function build(hdrs, rows){
   headers=hdrs; csvData=rows;
 
+  // Pick the layout strategy once per build; downstream sections
+  // delegate position / rotation / labels / camera to it.
+  const layout = LAYOUTS[layoutMode] || LAYOUTS.layers;
+
   // Find key columns
   const yearCol = findCol(hdrs, ['year']);
   const genreCol = findCol(hdrs, ['genre','type','category','style']);
@@ -533,82 +538,30 @@ function build(hdrs, rows){
       const bucketIdx = allBuckets.indexOf(bucket);
       const bucketFrac = bucketIdx / (allBuckets.length - 1 || 1);
 
-      if (layoutMode === 'sphere') {
-        const latSpread = (160 / (allBuckets.length || 1)) * (Math.PI / 180);
-        const lat = genreLat[bucket] + (Math.random() - 0.5) * latSpread;
-        const lon = yearNorm * Math.PI * 2 + (Math.random() - 0.5) * 0.15;
-        const r = SPHERE_RADIUS + (Math.random() - 0.5) * 10;
-        x = r * Math.cos(lat) * Math.cos(lon);
-        y = r * Math.sin(lat);
-        z = r * Math.cos(lat) * Math.sin(lon);
-
-      } else if (layoutMode === 'helix') {
-        // DNA double helix — two intertwined strands
-        const strand = li % 2; // alternate items between strands
-        const theta = yearNorm * Math.PI * 12 + (Math.random() - 0.5) * 0.2;
-        const helixY = (yearNorm - 0.5) * 120;
-        const strandOffset = strand * Math.PI; // 180° apart
-        const rJitter = HELIX_RADIUS + (Math.random() - 0.5) * 4;
-        x = rJitter * Math.cos(theta + strandOffset);
-        z = rJitter * Math.sin(theta + strandOffset);
-        y = helixY + (Math.random() - 0.5) * 2;
-
-      } else if (layoutMode === 'grid') {
-        // Clean organized grid — rows by genre, columns by year
-        const cols = Math.max(Math.ceil(Math.sqrt(rows.length / allBuckets.length)), 4);
-        const colIdx = Math.floor(yearNorm * (cols - 1));
-        const gridSpacing = 3.5;
-        x = (colIdx - cols / 2) * gridSpacing + (Math.random() - 0.5) * 0.6;
-        y = (allBuckets.length / 2 - bucketIdx) * gridSpacing * 1.8;
-        z = (Math.random() - 0.5) * 2;
-
-      } else if (layoutMode === 'schotter') {
-        // Georg Nees' Schotter — order dissolves into chaos
-        const cols = Math.max(Math.ceil(Math.sqrt(rows.length / allBuckets.length)), 6);
-        const colIdx = Math.floor(yearNorm * (cols - 1));
-        const gridSp = 3.2;
-        const rowIdx = allBuckets.length - 1 - bucketIdx;
-        const chaos = rowIdx / (allBuckets.length - 1 || 1); // 0=top(ordered), 1=bottom(chaotic)
-        const chaosAmt = chaos * chaos; // quadratic ramp
-        x = (colIdx - cols / 2) * gridSp + (Math.random() - 0.5) * chaosAmt * gridSp * 1.8;
-        y = (allBuckets.length / 2 - bucketIdx) * gridSp * 1.6 + (Math.random() - 0.5) * chaosAmt * gridSp * 1.5;
-        z = (Math.random() - 0.5) * chaosAmt * 12;
-
-      } else if (layoutMode === 'stream') {
-        // Flowing river — genre streams that weave and converge
-        const streamX = (yearNorm - 0.5) * X_SPREAD;
-        const streamPhase = bucketFrac * Math.PI * 2;
-        const meander = Math.sin(yearNorm * Math.PI * 3 + streamPhase) * 12;
-        const streamY = (allBuckets.length / 2 - bucketIdx) * 5 + meander;
-        const depth = Math.sin(yearNorm * Math.PI * 5 + streamPhase * 0.7) * 8;
-        x = streamX + (Math.random() - 0.5) * 3;
-        y = streamY + (Math.random() - 0.5) * 2;
-        z = depth + (Math.random() - 0.5) * 4;
-
-      } else {
-        // Layers (default)
-        x = (yearNorm - 0.5) * X_SPREAD;
-        if (yearCol) {
-          const yr = parseInt(item.row[yearCol]);
-          if (!(yr > 1900 && yr <= 2030)) x = (Math.random() - 0.5) * 10 - X_SPREAD/2 - 10;
-        }
-        y = genreY[bucket] + (Math.random() - 0.5) * Y_GAP * 0.5;
-        z = (Math.random() - 0.5) * Z_SCATTER;
-      }
+      const itemCtx = {
+        row: item.row,
+        yearCol,
+        yearNorm,
+        bucket,
+        bucketIdx,
+        bucketFrac,
+        li,
+        allBucketsLength: allBuckets.length,
+        rowsLength: rows.length,
+        genreY,
+        genreLat,
+        X_SPREAD, Y_GAP, Z_SCATTER,
+        SPHERE_RADIUS, HELIX_RADIUS,
+      };
+      const pos = layout.placeItem(itemCtx);
+      x = pos.x; y = pos.y; z = pos.z;
 
       const s = isOther ? 0.6 : 0.8 + Math.random() * 0.4;
       dummy.position.set(x, y, z);
       dummy.scale.set(s, s, s);
-      if (layoutMode === 'schotter') {
-        // Nees-style: rotation increases with row (order → chaos)
-        const rowIdx = allBuckets.length - 1 - bucketIdx;
-        const chaos = (rowIdx / (allBuckets.length - 1 || 1));
-        const chaosAmt = chaos * chaos;
-        dummy.rotation.set(
-          (Math.random() - 0.5) * chaosAmt * Math.PI,
-          (Math.random() - 0.5) * chaosAmt * Math.PI * 0.5,
-          (Math.random() - 0.5) * chaosAmt * Math.PI
-        );
+      if (layout.rotateItem) {
+        const rot = layout.rotateItem(itemCtx);
+        dummy.rotation.set(rot.x, rot.y, rot.z);
       } else {
         dummy.rotation.set(Math.random()*3, Math.random()*3, Math.random()*3);
       }
@@ -637,121 +590,35 @@ function build(hdrs, rows){
 
   // ─── Labels ───
   if (showLabels) {
-    if (layoutMode === 'sphere') {
-      allBuckets.forEach(bucket => {
-        if (bucket === '_other_') return;
-        const lat = genreLat[bucket];
-        const labelR = SPHERE_RADIUS + 15;
-        const sprite = makeLabel(bucket, colorMap[bucket] || OTHER);
-        sprite.position.set(labelR * Math.cos(lat), labelR * Math.sin(lat), 0);
-        scene.add(sprite); labelSprites.push(sprite);
-      });
-      const yearStep = yearRange > 30 ? 10 : 5;
-      for (let yr = Math.ceil(minYear/yearStep)*yearStep; yr <= maxYear; yr += yearStep) {
-        const lon = ((yr - minYear) / yearRange) * Math.PI * 2;
-        const labelR = SPHERE_RADIUS + 12;
-        const sprite = makeLabel(String(yr), '#bbb');
-        sprite.position.set(labelR * Math.cos(lon), -2, labelR * Math.sin(lon));
-        sprite.scale.set(8, 1.5, 1);
-        scene.add(sprite); labelSprites.push(sprite);
-      }
-
-    } else if (layoutMode === 'helix') {
-      // Year markers along the helix axis
-      const yearStep = yearRange > 30 ? 10 : 5;
-      for (let yr = Math.ceil(minYear/yearStep)*yearStep; yr <= maxYear; yr += yearStep) {
-        const yNorm = (yr - minYear) / yearRange;
-        const sprite = makeLabel(String(yr), '#bbb');
-        sprite.position.set(HELIX_RADIUS + 8, (yNorm - 0.5) * 120, 0);
-        sprite.scale.set(8, 1.5, 1);
-        scene.add(sprite); labelSprites.push(sprite);
-      }
-
-    } else if (layoutMode === 'grid') {
-      // Genre labels along left edge
-      const gridSpacing = 3.5;
-      const cols = Math.max(Math.ceil(Math.sqrt(rows.length / allBuckets.length)), 4);
-      allBuckets.forEach((bucket, i) => {
-        if (bucket === '_other_') return;
-        const sprite = makeLabel(bucket, colorMap[bucket] || OTHER);
-        sprite.position.set(-cols / 2 * gridSpacing - 10, (allBuckets.length / 2 - i) * gridSpacing * 1.8, 0);
-        scene.add(sprite); labelSprites.push(sprite);
-      });
-
-    } else if (layoutMode === 'schotter') {
-      // Genre labels along left edge, Nees-style
-      const gridSp = 3.2;
-      const cols = Math.max(Math.ceil(Math.sqrt(rows.length / allBuckets.length)), 6);
-      allBuckets.forEach((bucket, i) => {
-        if (bucket === '_other_') return;
-        const sprite = makeLabel(bucket, colorMap[bucket] || OTHER);
-        sprite.position.set(-cols / 2 * gridSp - 10, (allBuckets.length / 2 - i) * gridSp * 1.6, 0);
-        scene.add(sprite); labelSprites.push(sprite);
-      });
-
-    } else if (layoutMode === 'stream') {
-      // Genre labels at the start of each stream
-      allBuckets.forEach((bucket, i) => {
-        if (bucket === '_other_') return;
-        const streamPhase = (i / (allBuckets.length - 1 || 1)) * Math.PI * 2;
-        const meander = Math.sin(streamPhase) * 12;
-        const sprite = makeLabel(bucket, colorMap[bucket] || OTHER);
-        sprite.position.set(-X_SPREAD / 2 - 14, (allBuckets.length / 2 - i) * 5 + meander, 0);
-        scene.add(sprite); labelSprites.push(sprite);
-      });
-      const yearStep = yearRange > 30 ? 10 : 5;
-      for (let yr = Math.ceil(minYear/yearStep)*yearStep; yr <= maxYear; yr += yearStep) {
-        const xPos = ((yr - minYear) / yearRange - 0.5) * X_SPREAD;
-        const sprite = makeLabel(String(yr), '#bbb');
-        sprite.position.set(xPos, -allBuckets.length * 2.5 - 8, 0);
-        sprite.scale.set(8, 1.5, 1);
-        scene.add(sprite); labelSprites.push(sprite);
-      }
-
-    } else {
-      // Layers (default)
-      allBuckets.forEach(bucket => {
-        if (bucket === '_other_') return;
-        const sprite = makeLabel(bucket, colorMap[bucket] || OTHER);
-        sprite.position.set(-X_SPREAD/2 - 14, genreY[bucket], 0);
-        scene.add(sprite); labelSprites.push(sprite);
-      });
-      if (groups[Object.keys(groups).find(k => k.startsWith('_other_'))]) {
-        const sprite = makeLabel(`Other (${sortedGenres.length - MAX_GENRES} genres)`, OTHER);
-        sprite.position.set(-X_SPREAD/2 - 14, genreY['_other_'], 0);
-        scene.add(sprite); labelSprites.push(sprite);
-      }
-      const yearStep = yearRange > 30 ? 10 : 5;
-      for (let y = Math.ceil(minYear/yearStep)*yearStep; y <= maxYear; y += yearStep) {
-        const xPos = ((y - minYear) / yearRange - 0.5) * X_SPREAD;
-        const sprite = makeLabel(String(y), '#bbb');
-        sprite.position.set(xPos, genreY['_other_'] - Y_GAP, 0);
-        sprite.scale.set(8, 1.5, 1);
-        scene.add(sprite); labelSprites.push(sprite);
-      }
+    const labelCtx = {
+      allBuckets,
+      colorMap,
+      OTHER,
+      genreY,
+      genreLat,
+      X_SPREAD, Y_GAP, SPHERE_RADIUS, HELIX_RADIUS,
+      allBucketsLength: allBuckets.length,
+      rowsLength: rows.length,
+      groups,
+      sortedGenres,
+      MAX_GENRES,
+      yearRange,
+      minYear,
+      maxYear,
+      makeLabel,
+    };
+    const sprites = layout.placeLabels(labelCtx);
+    for (const sprite of sprites) {
+      scene.add(sprite);
+      labelSprites.push(sprite);
     }
   }
 
-  // Camera
-  if (layoutMode === 'sphere') {
-    controls.target.set(0, 0, 0);
-    camera.position.set(0, SPHERE_RADIUS * 0.5, SPHERE_RADIUS * 2.2);
-  } else if (layoutMode === 'helix') {
-    controls.target.set(0, 0, 0);
-    camera.position.set(60, 20, 60);
-  } else if (layoutMode === 'grid') {
-    controls.target.copy(centroid);
-    camera.position.set(centroid.x, centroid.y + 30, centroid.z + 60);
-  } else if (layoutMode === 'schotter') {
-    controls.target.copy(centroid);
-    camera.position.set(centroid.x, centroid.y + 20, centroid.z + 55);
-  } else if (layoutMode === 'stream') {
-    controls.target.copy(centroid);
-    camera.position.set(centroid.x, centroid.y + 20, centroid.z + X_SPREAD * 0.4);
-  } else {
-    controls.target.copy(centroid);
-    camera.position.set(centroid.x, centroid.y + 10, centroid.z + X_SPREAD * 0.5);
-  }
+  // ─── Camera ───
+  const cameraCtx = { centroid, X_SPREAD, SPHERE_RADIUS };
+  const cam = layout.setCamera(cameraCtx);
+  controls.target.copy(cam.target);
+  camera.position.copy(cam.position);
   controls.update();
 
   // HUD
@@ -759,12 +626,12 @@ function build(hdrs, rows){
   document.getElementById('hud-sub').textContent = `${ct} tracks`;
   const infoEl = document.getElementById('info');
   infoEl.textContent = '';
-  const infoLines = layoutMode === 'sphere'
-    ? [
-        yearCol ? `\u27F3 ${minYear} \u2014 ${yearCol} \u2014 ${maxYear} (longitude)` : '',
-        genreCol ? `\u2195 ${genreCol} (latitude, top ${topGenres.length})` : '',
-        'scroll zoom \u00b7 drag orbit \u00b7 click to inspect',
-      ].filter(Boolean)
+  const infoCtx = {
+    yearCol, genreCol, minYear, maxYear,
+    topGenresCount: topGenres.length,
+  };
+  const infoLines = layout.infoLines
+    ? layout.infoLines(infoCtx)
     : [
         yearCol ? `\u2190 ${minYear} \u2500\u2500\u2500 ${yearCol} \u2500\u2500\u2500 ${maxYear} \u2192` : '',
         genreCol ? `\u2195 ${genreCol} (top ${topGenres.length})` : '',
