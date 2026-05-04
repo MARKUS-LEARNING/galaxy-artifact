@@ -5,11 +5,11 @@
 <meta http-equiv="Content-Security-Policy"
       content="
         default-src 'self';
-        script-src 'self' 'unsafe-inline' blob:;
+        script-src 'self' 'unsafe-inline' blob: https://js-cdn.music.apple.com;
         style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://fonts.gstatic.com;
         font-src https://fonts.gstatic.com;
         img-src 'self' data: blob:;
-        connect-src 'self';
+        connect-src 'self' https://api.music.apple.com https://accounts.spotify.com https://api.spotify.com;
         worker-src blob:;
         object-src 'none';
         base-uri 'self';
@@ -161,7 +161,6 @@
   #album-card .ac-link.ac-spotify:hover { background: #1db954; }
   #album-card .ac-link.ac-apple:hover { background: #fa243c; }
   #album-card .ac-link.ac-discogs:hover { background: #333; }
-  #album-card .ac-link.ac-ebay:hover { background: #e53238; }
 
   /* Heart button on album card */
   #album-card .ac-heart {
@@ -824,7 +823,6 @@
     <button class="chip on" id="t-autofly">Auto-Fly</button>
     <button class="chip" id="t-figure8">Figure-8</button>
     <button class="chip" id="t-wave">Wave</button>
-    <button class="chip" id="t-grid">Grid</button>
   </div>
 </div>
 
@@ -860,7 +858,6 @@
     <a class="ac-link ac-spotify" href="#" target="_blank" rel="noopener noreferrer">Spotify</a>
     <a class="ac-link ac-apple" href="#" target="_blank" rel="noopener noreferrer">Apple Music</a>
     <a class="ac-link ac-discogs" href="#" target="_blank" rel="noopener noreferrer">Discogs</a>
-    <a class="ac-link ac-ebay" href="#" target="_blank" rel="noopener noreferrer">eBay</a>
   </div>
 </div>
 
@@ -914,7 +911,6 @@ let activePalette = 'rams';
 let activeBg = 'white';
 const OTHER = '#bbbbbb';
 const MAX_GENRES = 15;
-const MAX_PTS = Infinity;
 
 // ─── Geometry Pool ───
 const GEOMETRIES = [
@@ -961,7 +957,7 @@ function getCachedGeometry(idx) {
 const FLY_DEPTH = 200;
 
 let scene, camera, renderer, composer, bloomPass, controls, clock;
-let instanceGroups = [], allData = [], labelSprites = [];
+let instanceGroups = [], labelSprites = [];
 let headers = [], csvData = [], colorMap = {};
 let raycaster, mouse = new THREE.Vector2(-99,-99);
 let totalRows = 0;
@@ -970,12 +966,10 @@ let showLabels = true;
 let scaleMul = 1.0;
 let flyOffset = 0;
 let autoFly = true;
-let layoutMode = 'layers'; // 'layers' | 'sphere' | 'helix' | 'grid' | 'stream' | 'schotter' | 'oscillons' | 'mobiles'
+let layoutMode = 'layers'; // 'layers' | 'sphere' | 'helix' | 'grid' | 'stream' | 'schotter'
 let figure8Mode = false;
 let waveMode = false;
 let labelFontScale = 1.0;
-let showGrid = false;
-let gridGroup = null;
 let selectedCard = null; // currently shown card entry
 
 // ─── Filter & Sort ───
@@ -1277,22 +1271,16 @@ function parseCSV(text){
     if(v.length>=h.length-5&&v.length<=h.length+2){const r={};h.forEach((k,j)=>r[k]=(v[j]||'').trim());rows.push(r)}}
   return{headers:h,rows};
 }
-function sample(rows){if(rows.length<=MAX_PTS)return rows;const s=rows.length/MAX_PTS,o=[];for(let i=0;i<rows.length&&o.length<MAX_PTS;i+=s)o.push(rows[Math.floor(i)]);return o}
-
 // ─── CSV Web Worker (inline via Blob URL) ───
 const _workerCode = `
   ${csvSplitRows.toString()}
   ${csvSplitFields.toString()}
   ${parseCSV.toString()}
-  const MAX_PTS = ${MAX_PTS};
-  ${sample.toString()}
   self.onmessage = function(e) {
     try {
       self.postMessage({ type: 'progress', phase: 'parsing', pct: 55 });
       const result = parseCSV(e.data);
-      self.postMessage({ type: 'progress', phase: 'sampling', pct: 80 });
-      const sampled = sample(result.rows);
-      self.postMessage({ type: 'done', headers: result.headers, rows: sampled, totalRows: result.rows.length });
+      self.postMessage({ type: 'done', headers: result.headers, rows: result.rows, totalRows: result.rows.length });
     } catch (err) {
       self.postMessage({ type: 'error', message: err.message });
     }
@@ -1453,10 +1441,6 @@ function buildAppleMusicSearchUrl(song, artist) {
 function buildDiscogsSearchUrl(song, artist) {
   const query = [artist, song].filter(Boolean).join(' ');
   return 'https://www.discogs.com/search/?q=' + encodeURIComponent(query) + '&type=all';
-}
-function buildEbaySearchUrl(song, artist) {
-  const query = [artist, song].filter(Boolean).join(' ') + ' vinyl';
-  return 'https://www.ebay.com/sch/i.html?_nkw=' + encodeURIComponent(query);
 }
 
 function safeHref(url) {
@@ -1623,7 +1607,7 @@ function build(hdrs, rows){
     g.data = null;
   });
   labelSprites.forEach(s => { s.material.map?.dispose(); s.material.dispose(); scene.remove(s); });
-  instanceGroups=[]; allData=[]; labelSprites=[]; pinnedInstance=null; selectedCard=null; unpinning=null;
+  instanceGroups=[]; labelSprites=[]; pinnedInstance=null; selectedCard=null; unpinning=null;
   flyOffset = 0;
 
   // ─── Group rows by (genre bucket, shapeIdx) ───
@@ -1711,32 +1695,6 @@ function build(hdrs, rows){
         x = (colIdx - cols / 2) * gridSp + (Math.random() - 0.5) * chaosAmt * gridSp * 1.8;
         y = (allBuckets.length / 2 - bucketIdx) * gridSp * 1.6 + (Math.random() - 0.5) * chaosAmt * gridSp * 1.5;
         z = (Math.random() - 0.5) * chaosAmt * 12;
-
-      } else if (layoutMode === 'oscillons') {
-        // Laposky's oscilloscope — Lissajous curves from sine generators
-        const curveIdx = bucketIdx % 4;
-        const freqPairs = [[3,2],[5,4],[7,6],[5,3]];
-        const [fA, fB] = freqPairs[curveIdx];
-        const phaseOff = (bucketIdx / (allBuckets.length || 1)) * Math.PI;
-        const theta = yearNorm * Math.PI * 2 * 3; // 3 full loops
-        const r = 35 + bucketIdx * 3;
-        x = r * Math.sin(fA * theta + phaseOff);
-        y = r * Math.cos(fB * theta);
-        z = 15 * Math.sin(theta * 2 + phaseOff) + (Math.random() - 0.5) * 4;
-        x += (Math.random() - 0.5) * 3;
-        y += (Math.random() - 0.5) * 3;
-
-      } else if (layoutMode === 'mobiles') {
-        // Pask's Colloquy of Mobiles — hanging kinetic sculpture
-        const branchAngle = (bucketIdx / (allBuckets.length || 1)) * Math.PI * 2;
-        const armLen = 30 + bucketIdx * 5;
-        const branchX = armLen * Math.cos(branchAngle);
-        const branchZ = armLen * Math.sin(branchAngle);
-        const hangDepth = -yearNorm * 60 - Math.random() * 10;
-        const swing = Math.sin(yearNorm * Math.PI * 4 + bucketIdx) * 5;
-        x = branchX + swing + (Math.random() - 0.5) * 8;
-        y = hangDepth;
-        z = branchZ + (Math.random() - 0.5) * 8;
 
       } else if (layoutMode === 'stream') {
         // Flowing river — genre streams that weave and converge
@@ -1853,31 +1811,6 @@ function build(hdrs, rows){
         scene.add(sprite); labelSprites.push(sprite);
       });
 
-    } else if (layoutMode === 'oscillons') {
-      // Genre labels near their Lissajous curves
-      allBuckets.forEach((bucket, i) => {
-        if (bucket === '_other_') return;
-        const curveIdx = i % 4;
-        const freqPairs = [[3,2],[5,4],[7,6],[5,3]];
-        const [fA, fB] = freqPairs[curveIdx];
-        const phaseOff = (i / (allBuckets.length || 1)) * Math.PI;
-        const r = 35 + i * 3;
-        const sprite = makeLabel(bucket, colorMap[bucket] || OTHER);
-        sprite.position.set(r * Math.sin(fA * 0.3 + phaseOff) + r * 0.3, r * Math.cos(fB * 0.3) + 5, 0);
-        scene.add(sprite); labelSprites.push(sprite);
-      });
-
-    } else if (layoutMode === 'mobiles') {
-      // Genre labels at branch origins
-      allBuckets.forEach((bucket, i) => {
-        if (bucket === '_other_') return;
-        const branchAngle = (i / (allBuckets.length || 1)) * Math.PI * 2;
-        const armLen = 30 + i * 5;
-        const sprite = makeLabel(bucket, colorMap[bucket] || OTHER);
-        sprite.position.set(armLen * Math.cos(branchAngle), 5, armLen * Math.sin(branchAngle));
-        scene.add(sprite); labelSprites.push(sprite);
-      });
-
     } else if (layoutMode === 'stream') {
       // Genre labels at the start of each stream
       allBuckets.forEach((bucket, i) => {
@@ -1934,12 +1867,6 @@ function build(hdrs, rows){
   } else if (layoutMode === 'schotter') {
     controls.target.copy(centroid);
     camera.position.set(centroid.x, centroid.y + 20, centroid.z + 55);
-  } else if (layoutMode === 'oscillons') {
-    controls.target.set(0, 0, 0);
-    camera.position.set(0, 20, 120);
-  } else if (layoutMode === 'mobiles') {
-    controls.target.set(0, -25, 0);
-    camera.position.set(80, 15, 80);
   } else if (layoutMode === 'stream') {
     controls.target.copy(centroid);
     camera.position.set(centroid.x, centroid.y + 20, centroid.z + X_SPREAD * 0.4);
@@ -1996,108 +1923,11 @@ function makeLabel(text, color){
   return s;
 }
 
-// ─── Cartesian Grid ───
-function buildGrid() {
-  if (gridGroup) {
-    scene.remove(gridGroup);
-    gridGroup = null;
-  }
-  if (!showGrid) return;
-
-  gridGroup = new THREE.Group();
-  const gridSize = 200;
-  const gridDivisions = 20;
-  const gridColor = 0x555555;
-  const gridOpacity = 0.3;
-
-  // XZ plane grid (floor)
-  const xzGrid = new THREE.GridHelper(gridSize, gridDivisions, gridColor, gridColor);
-  xzGrid.material.transparent = true;
-  xzGrid.material.opacity = gridOpacity;
-  gridGroup.add(xzGrid);
-
-  // XY plane grid (back wall)
-  const xyGrid = new THREE.GridHelper(gridSize, gridDivisions, gridColor, gridColor);
-  xyGrid.rotation.x = Math.PI / 2;
-  xyGrid.position.z = -gridSize / 2;
-  xyGrid.material.transparent = true;
-  xyGrid.material.opacity = gridOpacity * 0.6;
-  gridGroup.add(xyGrid);
-
-  // YZ plane grid (side wall)
-  const yzGrid = new THREE.GridHelper(gridSize, gridDivisions, gridColor, gridColor);
-  yzGrid.rotation.z = Math.PI / 2;
-  yzGrid.position.x = -gridSize / 2;
-  yzGrid.material.transparent = true;
-  yzGrid.material.opacity = gridOpacity * 0.6;
-  gridGroup.add(yzGrid);
-
-  // Axis lines
-  const axisLength = gridSize / 2 + 20;
-  const axisLineWidth = 2;
-
-  const xAxisGeo = new THREE.BufferGeometry().setFromPoints([
-    new THREE.Vector3(-axisLength, 0, 0),
-    new THREE.Vector3(axisLength, 0, 0)
-  ]);
-  const xAxisMat = new THREE.LineBasicMaterial({color: 0xff4444, linewidth: axisLineWidth});
-  gridGroup.add(new THREE.Line(xAxisGeo, xAxisMat));
-
-  const yAxisGeo = new THREE.BufferGeometry().setFromPoints([
-    new THREE.Vector3(0, -axisLength, 0),
-    new THREE.Vector3(0, axisLength, 0)
-  ]);
-  const yAxisMat = new THREE.LineBasicMaterial({color: 0x44ff44, linewidth: axisLineWidth});
-  gridGroup.add(new THREE.Line(yAxisGeo, yAxisMat));
-
-  const zAxisGeo = new THREE.BufferGeometry().setFromPoints([
-    new THREE.Vector3(0, 0, -axisLength),
-    new THREE.Vector3(0, 0, axisLength)
-  ]);
-  const zAxisMat = new THREE.LineBasicMaterial({color: 0x4488ff, linewidth: axisLineWidth});
-  gridGroup.add(new THREE.Line(zAxisGeo, zAxisMat));
-
-  // Axis labels
-  const labelOffset = axisLength + 8;
-
-  const xLabel = makeAxisLabel('X', '#ff4444');
-  xLabel.position.set(labelOffset, 0, 0);
-  gridGroup.add(xLabel);
-
-  const yLabel = makeAxisLabel('Y', '#44ff44');
-  yLabel.position.set(0, labelOffset, 0);
-  gridGroup.add(yLabel);
-
-  const zLabel = makeAxisLabel('Z', '#4488ff');
-  zLabel.position.set(0, 0, labelOffset);
-  gridGroup.add(zLabel);
-
-  scene.add(gridGroup);
-}
-
-function makeAxisLabel(text, color) {
-  const canvas = document.createElement('canvas');
-  canvas.width = 128;
-  canvas.height = 64;
-  const ctx = canvas.getContext('2d');
-  ctx.font = 'bold 48px Space Mono, monospace';
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.fillStyle = color;
-  ctx.fillText(text, 64, 32);
-  const texture = new THREE.CanvasTexture(canvas);
-  texture.minFilter = THREE.LinearFilter;
-  const material = new THREE.SpriteMaterial({map: texture, transparent: true, depthWrite: false});
-  const sprite = new THREE.Sprite(material);
-  sprite.scale.set(8, 4, 1);
-  return sprite;
-}
-
 // ─── Floating Animation ───
 const _floatDummy = new THREE.Object3D();
 function updateFloat(t) {
   const isSphere = layoutMode === 'sphere';
-  const isRadial = isSphere || layoutMode === 'helix' || layoutMode === 'oscillons' || layoutMode === 'mobiles';
+  const isRadial = isSphere || layoutMode === 'helix';
   const spinAngle = isRadial && autoFly && !figure8Mode ? flyOffset * 0.3 : 0;
   const cosS = Math.cos(spinAngle), sinS = Math.sin(spinAngle);
 
@@ -2352,36 +2182,7 @@ function onClick(e) {
     unpinning = null; // cancel any in-progress return animation
     pinnedInstance = { groupIdx: gi, instanceId: h.instanceId, entry, originPos, pinTime, settled: false };
 
-    const r = entry.row;
-    card.querySelector('.ac-name').textContent = r[entry.nameCol] || '';
-    const parts = [];
-    if (entry.artistCol && r[entry.artistCol]) parts.push(r[entry.artistCol]);
-    if (entry.albumCol && r[entry.albumCol]) parts.push(r[entry.albumCol]);
-    if (entry.yearCol && r[entry.yearCol]) parts.push(r[entry.yearCol]);
-    card.querySelector('.ac-sub').textContent = parts.join(' · ');
-
-    const gc = colorMap[entry.genreCol ? r[entry.genreCol] : ''] || OTHER;
-    const ge = card.querySelector('.ac-genre');
-    ge.textContent = entry.genreCol ? r[entry.genreCol] : '';
-    ge.style.background = gc + '22';
-    ge.style.color = gc;
-
-    // Search links
-    const artist = (entry.artistCol && r[entry.artistCol]) || '';
-    const song = r[entry.nameCol] || '';
-    card.querySelector('.ac-yt').href = safeHref(buildYouTubeSearchUrl(song, artist));
-    card.querySelector('.ac-spotify').href = safeHref(buildSpotifySearchUrl(song, artist));
-    card.querySelector('.ac-apple').href = safeHref(buildAppleMusicSearchUrl(song, artist));
-    card.querySelector('.ac-discogs').href = safeHref(buildDiscogsSearchUrl(song, artist));
-    card.querySelector('.ac-ebay').href = safeHref(buildEbaySearchUrl(song, artist));
-
-    // Sync heart state
-    const heartBtn = card.querySelector('.ac-heart');
-    heartBtn.classList.toggle('hearted', isHearted(entry));
-    heartBtn.classList.remove('jumping');
-
-    card.classList.add('pinned');
-    card.style.display = 'block';
+    populateAlbumCard(entry);
   } else {
     // Click on empty space — unpin
     unpinInstance();
@@ -2411,6 +2212,34 @@ function onCursorHint(e) {
       _cursorHintPending = false;
     });
   }
+}
+
+// ─── Populate album card (shared by click + search pin) ───
+function populateAlbumCard(entry) {
+  const card = document.getElementById('album-card');
+  const r = entry.row;
+  card.querySelector('.ac-name').textContent = r[entry.nameCol] || '';
+  const parts = [];
+  if (entry.artistCol && r[entry.artistCol]) parts.push(r[entry.artistCol]);
+  if (entry.albumCol && r[entry.albumCol]) parts.push(r[entry.albumCol]);
+  if (entry.yearCol && r[entry.yearCol]) parts.push(r[entry.yearCol]);
+  card.querySelector('.ac-sub').textContent = parts.join(' · ');
+  const gc = colorMap[entry.genreCol ? r[entry.genreCol] : ''] || OTHER;
+  const ge = card.querySelector('.ac-genre');
+  ge.textContent = entry.genreCol ? r[entry.genreCol] : '';
+  ge.style.background = gc + '22';
+  ge.style.color = gc;
+  const artist = (entry.artistCol && r[entry.artistCol]) || '';
+  const song = r[entry.nameCol] || '';
+  card.querySelector('.ac-yt').href = safeHref(buildYouTubeSearchUrl(song, artist));
+  card.querySelector('.ac-spotify').href = safeHref(buildSpotifySearchUrl(song, artist));
+  card.querySelector('.ac-apple').href = safeHref(buildAppleMusicSearchUrl(song, artist));
+  card.querySelector('.ac-discogs').href = safeHref(buildDiscogsSearchUrl(song, artist));
+  const heartBtn = card.querySelector('.ac-heart');
+  heartBtn.classList.toggle('hearted', isHearted(entry));
+  heartBtn.classList.remove('jumping');
+  card.classList.add('pinned');
+  card.style.display = 'block';
 }
 
 // ─── Close card ───
@@ -2630,7 +2459,7 @@ function animate(){
   }
 
   // Rotate labels with radial layouts
-  const isRadialLayout = layoutMode === 'sphere' || layoutMode === 'helix' || layoutMode === 'oscillons' || layoutMode === 'mobiles';
+  const isRadialLayout = layoutMode === 'sphere' || layoutMode === 'helix';
   if (isRadialLayout && autoFly && !figure8Mode) {
     const spin = flyOffset * 0.3;
     const cs = Math.cos(spin), ss = Math.sin(spin);
@@ -2651,7 +2480,7 @@ function loadData(text) {
   if (!r.length) return;
   totalRows = r.length;
   headers = h;
-  masterData = sample(r);
+  masterData = r;
   activeFilters = {};
   activeSortCol = null;
   activeSortDir = 'asc';
@@ -2706,7 +2535,7 @@ function handleFile(f) {
           setProgress(90);
           totalRows = r.length;
           headers = h;
-          masterData = sample(r);
+          masterData = r;
           activeFilters = {}; activeSortCol = null; activeSortDir = 'asc';
           populateFilterPanel(h, masterData);
           populateYearDropdown(h, masterData);
@@ -2860,7 +2689,7 @@ document.getElementById('ctrl-toggle').addEventListener('click', () => {
 
 // Layout chips
 const layoutRow = document.getElementById('layout-row');
-['layers', 'sphere', 'helix', 'grid', 'stream', 'schotter', 'oscillons', 'mobiles'].forEach(mode => {
+['layers', 'sphere', 'helix', 'grid', 'stream', 'schotter'].forEach(mode => {
   const btn = document.createElement('button');
   btn.className = 'chip' + (mode === layoutMode ? ' on' : '');
   btn.textContent = mode;
@@ -2958,12 +2787,6 @@ document.getElementById('t-wave').addEventListener('click', function() {
   this.classList.toggle('on');
   waveMode = this.classList.contains('on');
 });
-document.getElementById('t-grid').addEventListener('click', function() {
-  this.classList.toggle('on');
-  showGrid = this.classList.contains('on');
-  buildGrid();
-});
-
 // ─── Filter/Sort Panel ───
 document.getElementById('filter-toggle').addEventListener('click', () => {
   const panel = document.getElementById('filter-panel');
@@ -3137,8 +2960,7 @@ function pinArtifactByRow(targetRow) {
         card.querySelector('.ac-spotify').href = safeHref(buildSpotifySearchUrl(song, artist));
         card.querySelector('.ac-apple').href = safeHref(buildAppleMusicSearchUrl(song, artist));
         card.querySelector('.ac-discogs').href = safeHref(buildDiscogsSearchUrl(song, artist));
-        card.querySelector('.ac-ebay').href = safeHref(buildEbaySearchUrl(song, artist));
-        const heartBtn = card.querySelector('.ac-heart');
+            const heartBtn = card.querySelector('.ac-heart');
         heartBtn.classList.toggle('hearted', isHearted(d));
         heartBtn.classList.remove('jumping');
         card.classList.add('pinned');
