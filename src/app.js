@@ -14,6 +14,16 @@ import {
   buildDiscogsSearchUrl,
   safeHref,
 } from './util/search-urls.js';
+import {
+  getArtifactKey,
+  isHearted,
+  getAll as getAllArtifacts,
+  getCount as getArtifactCount,
+  addArtifact,
+  removeByKey as removeArtifactByKey,
+  removeAt as removeArtifactAt,
+  subscribe as subscribeArchive,
+} from './archive/store.js';
 
 let activePalette = 'rams';
 let activeBg = 'white';
@@ -219,35 +229,8 @@ function populateFilterPanel(hdrs, rows) {
 }
 
 // ─── Artifact Archive (hearted collection) ───
-let artifactArchive = loadArtifactArchive();
-function loadArtifactArchive() {
-  try {
-    const raw = localStorage.getItem('artifactArchive');
-    if (!raw) return [];
-    const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return [];
-    // Cap at 10K entries and validate shape
-    return parsed.slice(0, 10000).filter(a => a && typeof a === 'object' && typeof a.key === 'string');
-  } catch { return []; }
-}
-
-function getArtifactKey(entry) {
-  const r = entry.row;
-  const name = r[entry.nameCol] || '';
-  const artist = (entry.artistCol && r[entry.artistCol]) || '';
-  const album = (entry.albumCol && r[entry.albumCol]) || '';
-  return name + '|||' + artist + '|||' + album;
-}
-
-function isHearted(entry) {
-  const key = getArtifactKey(entry);
-  return artifactArchive.some(a => a.key === key);
-}
-
-function saveArtifactArchive() {
-  localStorage.setItem('artifactArchive', JSON.stringify(artifactArchive));
-  updateBagUI();
-}
+// The store itself lives in src/archive/store.js; this section only
+// holds DOM-tied helpers (swoop animation, bag-panel renderer).
 
 function createSwoopAnimation(nameText, startRect) {
   const bag = document.getElementById('ab-toggle');
@@ -287,15 +270,18 @@ function updateBagUI() {
   const listEl = document.getElementById('ab-list');
   const emptyEl = document.getElementById('ab-empty');
 
-  countEl.textContent = artifactArchive.length;
-  countEl.classList.toggle('has-items', artifactArchive.length > 0);
+  const count = getArtifactCount();
+  const hasAny = count > 0;
+
+  countEl.textContent = count;
+  countEl.classList.toggle('has-items', hasAny);
 
   const icon = document.querySelector('#artifact-bag .ab-icon');
-  icon.textContent = artifactArchive.length > 0 ? '\u2665' : '\u2661';
+  icon.textContent = hasAny ? '\u2665' : '\u2661';
 
   const footerEl = document.querySelector('#artifact-bag .ab-footer');
   listEl.innerHTML = '';
-  if (artifactArchive.length === 0) {
+  if (!hasAny) {
     emptyEl.style.display = '';
     if (footerEl) footerEl.style.display = 'none';
     return;
@@ -303,7 +289,7 @@ function updateBagUI() {
   emptyEl.style.display = 'none';
   if (footerEl) footerEl.style.display = '';
 
-  artifactArchive.forEach((a, i) => {
+  getAllArtifacts().forEach((a, i) => {
     const item = document.createElement('div');
     item.className = 'ab-item';
     item.innerHTML =
@@ -1346,7 +1332,7 @@ document.getElementById('album-card').querySelector('.ac-heart').addEventListene
   const r = entry.row;
 
   if (isHearted(entry)) {
-    artifactArchive = artifactArchive.filter(a => a.key !== key);
+    removeArtifactByKey(key);
     heartBtn.classList.remove('hearted');
   } else {
     const artifact = {
@@ -1358,7 +1344,7 @@ document.getElementById('album-card').querySelector('.ac-heart').addEventListene
       year: (entry.yearCol && r[entry.yearCol]) || '',
       heartedAt: new Date().toISOString(),
     };
-    artifactArchive.push(artifact);
+    addArtifact(artifact);
     heartBtn.classList.add('hearted');
 
     // Jump animation
@@ -1370,8 +1356,6 @@ document.getElementById('album-card').querySelector('.ac-heart').addEventListene
     const nameRect = nameEl.getBoundingClientRect();
     createSwoopAnimation(artifact.name, nameRect);
   }
-
-  saveArtifactArchive();
 });
 
 // ─── Artifact Bag panel ───
@@ -1383,20 +1367,20 @@ document.getElementById('ab-list').addEventListener('click', (e) => {
   const btn = e.target.closest('.ab-item-remove');
   if (!btn) return;
   const idx = parseInt(btn.dataset.idx);
-  artifactArchive.splice(idx, 1);
-  saveArtifactArchive();
+  removeArtifactAt(idx);
   if (selectedCard && !isHearted(selectedCard)) {
     document.querySelector('.ac-heart')?.classList.remove('hearted');
   }
 });
 
 document.getElementById('ab-export').addEventListener('click', () => {
-  if (!artifactArchive.length) return;
+  const all = getAllArtifacts();
+  if (!all.length) return;
   const exportData = {
     format: 'artifact-archive-v1',
     exportedAt: new Date().toISOString(),
-    count: artifactArchive.length,
-    artifacts: artifactArchive.map(a => ({
+    count: all.length,
+    artifacts: all.map(a => ({
       name: a.name, artist: a.artist, album: a.album,
       genre: a.genre, year: a.year, heartedAt: a.heartedAt,
     }))
@@ -1410,6 +1394,8 @@ document.getElementById('ab-export').addEventListener('click', () => {
   URL.revokeObjectURL(url);
 });
 
+// Re-render the bag UI on every store mutation, plus once on startup.
+subscribeArchive(updateBagUI);
 updateBagUI();
 
 // ─── Page Visibility ───
