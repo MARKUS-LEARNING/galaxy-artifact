@@ -27,7 +27,7 @@ import {
 import { csvSplitRows, csvSplitFields, parseCSV } from './ingestion/csv-parser.js';
 import { parseXML, isXML } from './ingestion/xml-parser.js';
 
-let activePalette = 'rams';
+let activePalette = 'evangelion';
 let activeBg = 'white';
 
 const FLY_DEPTH = 200;
@@ -367,7 +367,6 @@ const _tmpVec3C = new THREE.Vector3();
 function initScene(){
   scene=new THREE.Scene();
   const defaultBgColor = new THREE.Color(BACKGROUNDS[activeBg] || '#ffffff');
-  scene.background = defaultBgColor;
   scene.fog = new THREE.FogExp2(defaultBgColor, 0.0004);
   camera=new THREE.PerspectiveCamera(55,innerWidth/innerHeight,0.5,3000);
   const disableAntialias = isMobile();
@@ -376,10 +375,19 @@ function initScene(){
   renderer.setSize(innerWidth,innerHeight);
   renderer.setPixelRatio(Math.min(devicePixelRatio,2));
   renderer.toneMapping=THREE.ACESFilmicToneMapping;
+  // scene.background renders through the tonemapped background shader, which dulls
+  // pure white into gray under ACES; the renderer clear color bypasses tonemapping.
+  renderer.setClearColor(defaultBgColor, 1);
   document.body.appendChild(renderer.domElement);
   composer=new EffectComposer(renderer);
   composer.addPass(new RenderPass(scene,camera));
   bloomPass=new UnrealBloomPass(new THREE.Vector2(innerWidth,innerHeight),0,0.4,0.92);
+  // UnrealBloomPass's screen-copy/blend materials default toneMapped=true, which
+  // re-applies ACES on top of the scene that RenderPass already tonemapped once,
+  // crushing whites toward gray. Tonemap only once, at the source render.
+  bloomPass.basic.toneMapped = false;
+  bloomPass.compositeMaterial.toneMapped = false;
+  bloomPass.blendMaterial.toneMapped = false;
   composer.addPass(bloomPass);
   controls=new OrbitControls(camera,renderer.domElement);
   controls.enableDamping=true;controls.dampingFactor=0.06;
@@ -1606,7 +1614,7 @@ Object.entries(BACKGROUNDS).forEach(([name, hex]) => {
     bgRow.querySelectorAll('.chip').forEach(c => c.classList.remove('on'));
     btn.classList.add('on');
     const col = new THREE.Color(hex);
-    scene.background = col;
+    renderer.setClearColor(col, 1);
     scene.fog.color = col;
     const lightBgs = new Set(['white', 'snow']);
     const isDark = !lightBgs.has(name);
