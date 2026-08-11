@@ -35,6 +35,16 @@ export function buildDiscogsSearchUrl(song, artist) {
   return 'https://www.discogs.com/search/?q=' + encodeURIComponent(query) + '&type=all';
 }
 
+// Converts an open.spotify.com search URL to the spotify: URI-scheme
+// equivalent. On phones, universal links to /search/<query> get
+// intercepted by the Spotify app, which drops the query and lands on
+// the Recents tab; the URI scheme takes a code path that preserves it.
+export function spotifyAppSearchUri(webSearchUrl) {
+  const prefix = 'https://open.spotify.com/search/';
+  if (!webSearchUrl || !webSearchUrl.startsWith(prefix)) return null;
+  return 'spotify:search:' + webSearchUrl.slice(prefix.length);
+}
+
 export function safeHref(url) {
   try {
     const parsed = new URL(url);

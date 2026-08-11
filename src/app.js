@@ -12,6 +12,7 @@ import {
   buildSpotifySearchUrl,
   buildAppleMusicSearchUrl,
   buildDiscogsSearchUrl,
+  spotifyAppSearchUri,
   safeHref,
 } from './util/search-urls.js';
 import {
@@ -1187,6 +1188,31 @@ document.getElementById('album-card').querySelector('.ac-close').addEventListene
   });
 
   acHandle.addEventListener('pointercancel', resetCardDragState);
+}
+
+// ─── Spotify mobile deep-link fix ───
+// On iOS/Android the card's https search link is intercepted by the
+// Spotify app via universal links, which drops the /search/<query>
+// payload and lands on the Recents tab. Try the spotify: URI scheme
+// first (a code path that preserves the query); if the app never takes
+// over (page stays visible), fall back to the original web URL.
+{
+  const isMobileDevice = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+  document.getElementById('album-card').querySelector('.ac-spotify').addEventListener('click', (e) => {
+    if (!isMobileDevice) return;
+    const webUrl = e.currentTarget.href;
+    const appUri = spotifyAppSearchUri(webUrl);
+    if (!appUri) return;
+    e.preventDefault();
+    const fallbackTimer = setTimeout(() => { window.location.href = webUrl; }, 1600);
+    document.addEventListener('visibilitychange', function cancelFallback() {
+      if (document.hidden) {
+        clearTimeout(fallbackTimer);
+        document.removeEventListener('visibilitychange', cancelFallback);
+      }
+    });
+    window.location.href = appUri;
+  });
 }
 
 // ─── Heart click ───
